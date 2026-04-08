@@ -27,7 +27,13 @@ void Game::CreateDeck(std::vector<Card>& deck, int numDecks) {
     for (int d = 0; d < numDecks; ++d) {
         for (int s = 0; s < 4; ++s) {
             for (int r = 1; r <= 13; ++r) {
-                deck.push_back({ static_cast<Rank>(r), static_cast<Suit>(s), false });
+                Card c;
+                c.rank = static_cast<Rank>(r);
+                c.suit = static_cast<Suit>(s);
+                c.faceUp = false;
+                c.hasInitializedPos = false;
+                c.flipVisual = -1.0f;
+                deck.push_back(c);
             }
         }
     }
@@ -432,6 +438,11 @@ void Game::UpdateAndDraw() {
 
     // Draw piles and handle hover logic
     // Draw in correct order, from bottom to top
+    float dt = ImGui::GetIO().DeltaTime;
+    float animSpeed = 15.0f * dt;
+    if (animSpeed > 1.0f) animSpeed = 1.0f;
+    float flipSpeed = 10.0f * dt;
+
     for (size_t i = 0; i < m_piles.size(); ++i) {
         Pile& p = m_piles[i];
         ImVec2 basePos = ImVec2(winPos.x + p.pos.x * scale, winPos.y + p.pos.y * scale);
@@ -458,11 +469,30 @@ void Game::UpdateAndDraw() {
                 }
 
                 ImVec2 cardPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
+                Card& cardRef = p.cards[c];
 
-                if (p.cards[c].faceUp) {
-                    DrawCard(drawList, cardPos, pSize, p.cards[c], scale);
+                if (!cardRef.hasInitializedPos) {
+                    cardRef.animPos = cardPos;
+                    cardRef.hasInitializedPos = true;
+                    cardRef.flipVisual = cardRef.faceUp ? 1.0f : -1.0f;
                 } else {
-                    DrawCardBack(drawList, cardPos, pSize, scale);
+                    cardRef.animPos.x += (cardPos.x - cardRef.animPos.x) * animSpeed;
+                    cardRef.animPos.y += (cardPos.y - cardRef.animPos.y) * animSpeed;
+                }
+
+                float targetFlip = cardRef.faceUp ? 1.0f : -1.0f;
+                if (cardRef.flipVisual < targetFlip) {
+                    cardRef.flipVisual += flipSpeed;
+                    if (cardRef.flipVisual > targetFlip) cardRef.flipVisual = targetFlip;
+                } else if (cardRef.flipVisual > targetFlip) {
+                    cardRef.flipVisual -= flipSpeed;
+                    if (cardRef.flipVisual < targetFlip) cardRef.flipVisual = targetFlip;
+                }
+
+                if (cardRef.flipVisual > 0.0f) {
+                    DrawCard(drawList, cardRef.animPos, pSize, cardRef, scale, cardRef.flipVisual);
+                } else {
+                    DrawCardBack(drawList, cardRef.animPos, pSize, scale, -cardRef.flipVisual);
                 }
 
                 // Check hover
@@ -497,19 +527,65 @@ void Game::UpdateAndDraw() {
             m_dragCards.assign(p.cards.begin() + hoveredCard, p.cards.end());
             
             ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
-            ImVec2 cardPos = ImVec2(winPos.x + p.pos.x * scale + pOffset.x * hoveredCard, 
-                                    winPos.y + p.pos.y * scale + pOffset.y * hoveredCard);
+            int drawIndex = hoveredCard;
+            if (p.type == PileType::Waste && p.cards.size() > 3) {
+                drawIndex = std::max(0, (int)hoveredCard - (int)(p.cards.size() - 3));
+            }
+            ImVec2 cardPos = ImVec2(winPos.x + p.pos.x * scale + pOffset.x * drawIndex, 
+                                    winPos.y + p.pos.y * scale + pOffset.y * drawIndex);
             m_dragOffset = ImVec2(mousePos.x - cardPos.x, mousePos.y - cardPos.y);
         }
     }
 
     // Dropping
     if (mouseReleased && m_dragSourcePile != -1) {
-        if (hoveredPile != -1 && hoveredPile != m_dragSourcePile) {
-            if (CanDrop(m_dragSourcePile, m_dragCards, hoveredPile)) {
-                DoMove(m_dragSourcePile, hoveredPile, m_dragCardIndex);
+        ImVec2 dragBasePos = ImVec2(mousePos.x - m_dragOffset.x, mousePos.y - m_dragOffset.y);
+        ImVec2 dragCenter = ImVec2(dragBasePos.x + CARD_SIZE.x * scale * 0.5f, dragBasePos.y + CARD_SIZE.y * scale * 0.5f);
+        
+        int bestDropPile = -1;
+        float bestDistSq = 9999999.0f;
+        
+        for (size_t i = 0; i < m_piles.size(); ++i) {
+            if ((int)i == m_dragSourcePile) continue;
+            
+            Pile& p = m_piles[i];
+            int cCount = p.cards.empty() ? 0 : (int)p.cards.size() - 1;
+            
+            int targetDrawIndex = cCount;
+            if (p.type == PileType::Waste && p.cards.size() > 3) {
+                targetDrawIndex = std::max(0, cCount - (int)(p.cards.size() - 3));
+            }
+            
+            ImVec2 targetPos = ImVec2(winPos.x + p.pos.x * scale + p.offset.x * scale * targetDrawIndex, 
+                                      winPos.y + p.pos.y * scale + p.offset.y * scale * targetDrawIndex);
+            ImVec2 targetCenter = ImVec2(targetPos.x + CARD_SIZE.x * scale * 0.5f, targetPos.y + CARD_SIZE.y * scale * 0.5f);
+            
+            float dx = dragCenter.x - targetCenter.x;
+            float dy = dragCenter.y - targetCenter.y;
+            float distSq = dx * dx + dy * dy;
+            
+            float maxDist = CARD_SIZE.x * scale * 1.5f; // Forgiving distance
+            if (distSq < maxDist * maxDist && distSq < bestDistSq) {
+                if (CanDrop(m_dragSourcePile, m_dragCards, i)) {
+                    bestDropPile = (int)i;
+                    bestDistSq = distSq;
+                }
             }
         }
+        
+        if (bestDropPile != -1) {
+            Pile& sp = m_piles[m_dragSourcePile];
+            for (size_t i = 0; i < m_dragCards.size(); ++i) {
+                sp.cards[m_dragCardIndex + i].animPos = m_dragCards[i].animPos;
+            }
+            DoMove(m_dragSourcePile, bestDropPile, m_dragCardIndex);
+        } else {
+            Pile& sp = m_piles[m_dragSourcePile];
+            for (size_t i = 0; i < m_dragCards.size(); ++i) {
+                sp.cards[m_dragCardIndex + i].animPos = m_dragCards[i].animPos;
+            }
+        }
+        
         m_dragSourcePile = -1;
         m_dragCardIndex = -1;
         m_dragCards.clear();
@@ -521,9 +597,9 @@ void Game::UpdateAndDraw() {
         ImVec2 pSize = ImVec2(CARD_SIZE.x * scale, CARD_SIZE.y * scale);
         ImVec2 pOffset = ImVec2(m_piles[m_dragSourcePile].offset.x * scale, m_piles[m_dragSourcePile].offset.y * scale);
         for (size_t c = 0; c < m_dragCards.size(); ++c) {
-            ImVec2 cardPos = ImVec2(dragBasePos.x + pOffset.x * c,
-                                    dragBasePos.y + pOffset.y * c);
-            DrawCard(drawList, cardPos, pSize, m_dragCards[c], scale);
+            ImVec2 cardPos = ImVec2(dragBasePos.x + pOffset.x * c, dragBasePos.y + pOffset.y * c);
+            m_dragCards[c].animPos = cardPos; // Snap to mouse instantly
+            DrawCard(drawList, cardPos, pSize, m_dragCards[c], scale, 1.0f, true);
         }
     }
 }
@@ -536,65 +612,87 @@ void Game::DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& 
     drawList->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(50, 100, 50, 150), r, 0, 2.0f * scale);
 }
 
-void Game::DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale) {
+void Game::DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, float widthScale, bool isDragged) {
     float r = CORNER_RADIUS * scale;
-    float s = 2.0f * scale; // shadow offset
+    float s = isDragged ? 8.0f * scale : 2.0f * scale; // shadow offset
+    float cx = pos.x + size.x * 0.5f;
+    float w = size.x * widthScale;
+    
+    ImVec2 pMin(cx - w * 0.5f, pos.y);
+    ImVec2 pMax(cx + w * 0.5f, pos.y + size.y);
     
     // Shadow
-    drawList->AddRectFilled(ImVec2(pos.x + s, pos.y + s), ImVec2(pos.x + size.x + s, pos.y + size.y + s), IM_COL32(0, 0, 0, 50), r);
+    ImU32 shadowColor = isDragged ? IM_COL32(0, 0, 0, 80) : IM_COL32(0, 0, 0, 50);
+    drawList->AddRectFilled(ImVec2(pMin.x + s, pMin.y + s), ImVec2(pMax.x + s, pMax.y + s), shadowColor, r);
     
     // Background
-    drawList->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(20, 60, 120, 255), r);
+    drawList->AddRectFilled(pMin, pMax, IM_COL32(20, 60, 120, 255), r);
     
-    // Pattern (simple grid)
-    float step = 10.0f * scale;
-    for (float x = step; x < size.x; x += step) {
-        drawList->AddLine(ImVec2(pos.x + x, pos.y), ImVec2(pos.x + x, pos.y + size.y), IM_COL32(30, 80, 140, 255), 1.0f * scale);
-    }
-    for (float y = step; y < size.y; y += step) {
-        drawList->AddLine(ImVec2(pos.x, pos.y + y), ImVec2(pos.x + size.x, pos.y + y), IM_COL32(30, 80, 140, 255), 1.0f * scale);
+    if (widthScale > 0.05f) {
+        drawList->PushClipRect(pMin, pMax, true);
+        // Pattern (simple grid)
+        float step = 10.0f * scale;
+        for (float x = step; x < size.x; x += step) {
+            drawList->AddLine(ImVec2(pos.x + x, pos.y), ImVec2(pos.x + x, pos.y + size.y), IM_COL32(30, 80, 140, 255), 1.0f * scale);
+        }
+        for (float y = step; y < size.y; y += step) {
+            drawList->AddLine(ImVec2(pos.x, pos.y + y), ImVec2(pos.x + size.x, pos.y + y), IM_COL32(30, 80, 140, 255), 1.0f * scale);
+        }
+        drawList->PopClipRect();
     }
 
     // Border
-    drawList->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y), COLOR_BORDER, r, 0, 1.0f * scale);
+    drawList->AddRect(pMin, pMax, COLOR_BORDER, r, 0, 1.0f * scale);
 }
 
-void Game::DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, const Card& card, float scale) {
+void Game::DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, const Card& card, float scale, float widthScale, bool isDragged) {
     float r = CORNER_RADIUS * scale;
-    float s = 2.0f * scale; // shadow offset
+    float s = isDragged ? 8.0f * scale : 2.0f * scale; // shadow offset
+    float cx = pos.x + size.x * 0.5f;
+    float w = size.x * widthScale;
+
+    ImVec2 pMin(cx - w * 0.5f, pos.y);
+    ImVec2 pMax(cx + w * 0.5f, pos.y + size.y);
 
     // Shadow
-    drawList->AddRectFilled(ImVec2(pos.x + s, pos.y + s), ImVec2(pos.x + size.x + s, pos.y + size.y + s), IM_COL32(0, 0, 0, 50), r);
+    ImU32 shadowColor = isDragged ? IM_COL32(0, 0, 0, 80) : IM_COL32(0, 0, 0, 50);
+    drawList->AddRectFilled(ImVec2(pMin.x + s, pMin.y + s), ImVec2(pMax.x + s, pMax.y + s), shadowColor, r);
     
     // Background
-    drawList->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), COLOR_BG_LIGHT, r);
+    drawList->AddRectFilled(pMin, pMax, COLOR_BG_LIGHT, r);
     
+    if (widthScale > 0.05f) {
+        drawList->PushClipRect(pMin, pMax, true);
+        
+        ImU32 color = card.IsRed() ? COLOR_RED : COLOR_BLACK;
+
+        // Rank text
+        const char* ranks[] = { "?", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K" };
+        const char* rankStr = ranks[(int)card.rank];
+        
+        float pad = 5.0f * scale;
+        float fontSize = ImGui::GetFontSize() * 1.5f;
+
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+        drawList->AddText(ImGui::GetFont(), fontSize, ImVec2(pos.x + pad, pos.y + pad), color, rankStr);
+
+        // Mini Suit below rank
+        DrawSuit(drawList, ImVec2(pos.x + 10.0f * scale, pos.y + fontSize + 15.0f * scale), 8.0f * scale, card.suit, color);
+
+        // Bottom right inverted text and suit
+        // ImGui lacks standard text rotation, so we just draw normal text but at bottom right
+        ImVec2 tsize = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, rankStr);
+        drawList->AddText(ImGui::GetFont(), fontSize, ImVec2(pos.x + size.x - tsize.x - pad, pos.y + size.y - tsize.y - 25.0f * scale), color, rankStr);
+        DrawSuit(drawList, ImVec2(pos.x + size.x - 10.0f * scale, pos.y + size.y - 15.0f * scale), 8.0f * scale, card.suit, color);
+        ImGui::PopFont();
+        // Center big suit
+        DrawSuit(drawList, ImVec2(pos.x + size.x * 0.5f, pos.y + size.y * 0.5f), 24.0f * scale, card.suit, color);
+        
+        drawList->PopClipRect();
+    }
+
     // Border
-    drawList->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y), COLOR_BORDER, r, 0, 1.0f * scale);
-
-    ImU32 color = card.IsRed() ? COLOR_RED : COLOR_BLACK;
-
-    // Rank text
-    const char* ranks[] = { "?", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K" };
-    const char* rankStr = ranks[(int)card.rank];
-    
-    float pad = 5.0f * scale;
-    
-    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
-    drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(pos.x + pad, pos.y + pad), color, rankStr);
-    
-    // Mini Suit below rank
-    DrawSuit(drawList, ImVec2(pos.x + 10.0f * scale, pos.y + 30.0f * scale), 8.0f * scale, card.suit, color);
-
-    // Bottom right inverted text and suit
-    // ImGui lacks standard text rotation, so we just draw normal text but at bottom right
-    ImVec2 tsize = ImGui::CalcTextSize(rankStr);
-    drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(pos.x + size.x - tsize.x - pad, pos.y + size.y - tsize.y - 25.0f * scale), color, rankStr);
-    DrawSuit(drawList, ImVec2(pos.x + size.x - 10.0f * scale, pos.y + size.y - 15.0f * scale), 8.0f * scale, card.suit, color);
-    ImGui::PopFont();
-
-    // Center big suit
-    DrawSuit(drawList, ImVec2(pos.x + size.x * 0.5f, pos.y + size.y * 0.5f), 24.0f * scale, card.suit, color);
+    drawList->AddRect(pMin, pMax, COLOR_BORDER, r, 0, 1.0f * scale);
 }
 
 void Game::DrawSuit(ImDrawList* drawList, const ImVec2& center, float size, Suit suit, ImU32 color) {
@@ -637,13 +735,11 @@ void Game::DrawSuit(ImDrawList* drawList, const ImVec2& center, float size, Suit
         drawList->AddCircleFilled(ImVec2(center.x - r * 1.1f, center.y + r * 0.5f), r, color, 12);
         drawList->AddCircleFilled(ImVec2(center.x + r * 1.1f, center.y + r * 0.5f), r, color, 12);
         
-        // Fill center gap
-        drawList->AddTriangleFilled(ImVec2(center.x, center.y - r * 0.5f), 
-                                    ImVec2(center.x - r * 0.5f, center.y + r * 0.5f),
-                                    ImVec2(center.x + r * 0.5f, center.y + r * 0.5f), color);
+        // Fill center gap seamlessly
+        drawList->AddCircleFilled(center, r * 0.8f, color, 12);
         
         // Base (stem)
-        drawList->AddTriangleFilled(ImVec2(center.x, center.y + r * 0.5f), 
+        drawList->AddTriangleFilled(ImVec2(center.x, center.y + r * 0.2f), 
                                     ImVec2(center.x - r * 0.8f, center.y + size * 1.2f),
                                     ImVec2(center.x + r * 0.8f, center.y + size * 1.2f), color);
     }

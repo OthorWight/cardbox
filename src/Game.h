@@ -14,6 +14,11 @@ struct Card {
     Suit suit;
     bool faceUp = false;
 
+    // Animation state
+    ImVec2 animPos = ImVec2(0, 0);
+    bool hasInitializedPos = false;
+    float flipVisual = -1.0f; // -1.0 is face down, 1.0 is face up
+
     // Helper functions
     bool IsRed() const { return suit == Suit::Hearts || suit == Suit::Diamonds; }
     int Color() const { return IsRed() ? 1 : 0; }
@@ -62,8 +67,8 @@ private:
     void HandleClick(int pileIdx); // For things like stock pile clicking
 
     // Rendering
-    void DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, const Card& card, float scale);
-    void DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale);
+    void DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, const Card& card, float scale, float widthScale = 1.0f, bool isDragged = false);
+    void DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, float widthScale = 1.0f, bool isDragged = false);
     void DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale);
     void DrawSuit(ImDrawList* drawList, const ImVec2& center, float size, Suit suit, ImU32 color);
 };
