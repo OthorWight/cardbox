@@ -407,7 +407,7 @@ void Game::UpdateAndDraw() {
     float scale = ImGui::GetWindowWidth() / 1280.0f;
     if (scale < 0.5f) scale = 0.5f;
 
-    ImGui::SetWindowFontScale(scale);
+    ImGui::GetIO().FontGlobalScale = scale;
 
     // Menu bar
     if (ImGui::BeginMainMenuBar()) {
@@ -452,12 +452,12 @@ void Game::UpdateAndDraw() {
                 // Skip drawing dragged cards in their original pile
                 if (m_dragSourcePile == (int)i && (int)c >= m_dragCardIndex) continue;
 
-                ImVec2 cardPos = ImVec2(basePos.x + pOffset.x * c, basePos.y + pOffset.y * c);
-                
-                // For Waste pile in Klondike, usually limit spread to last 3
-                if (p.type == PileType::Waste && c < p.cards.size() - 3) {
-                    cardPos = basePos; // Collapse underneath
+                int drawIndex = c;
+                if (p.type == PileType::Waste && p.cards.size() > 3) {
+                    drawIndex = std::max(0, (int)c - (int)(p.cards.size() - 3));
                 }
+
+                ImVec2 cardPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
 
                 if (p.cards[c].faceUp) {
                     DrawCard(drawList, cardPos, pSize, p.cards[c], scale);
@@ -632,14 +632,19 @@ void Game::DrawSuit(ImDrawList* drawList, const ImVec2& center, float size, Suit
                                     ImVec2(center.x + r, center.y + size * 1.5f), color);
     } 
     else if (suit == Suit::Clubs) {
-        float r = size * 0.45f;
-        drawList->AddCircleFilled(ImVec2(center.x, center.y - r * 1.2f), r, color, 12);
+        float r = size * 0.4f;
+        drawList->AddCircleFilled(ImVec2(center.x, center.y - r * 1.1f), r, color, 12);
         drawList->AddCircleFilled(ImVec2(center.x - r * 1.1f, center.y + r * 0.5f), r, color, 12);
         drawList->AddCircleFilled(ImVec2(center.x + r * 1.1f, center.y + r * 0.5f), r, color, 12);
         
-        // Base
-        drawList->AddTriangleFilled(ImVec2(center.x, center.y), 
-                                    ImVec2(center.x - r, center.y + size * 1.3f),
-                                    ImVec2(center.x + r, center.y + size * 1.3f), color);
+        // Fill center gap
+        drawList->AddTriangleFilled(ImVec2(center.x, center.y - r * 0.5f), 
+                                    ImVec2(center.x - r * 0.5f, center.y + r * 0.5f),
+                                    ImVec2(center.x + r * 0.5f, center.y + r * 0.5f), color);
+        
+        // Base (stem)
+        drawList->AddTriangleFilled(ImVec2(center.x, center.y + r * 0.5f), 
+                                    ImVec2(center.x - r * 0.8f, center.y + size * 1.2f),
+                                    ImVec2(center.x + r * 0.8f, center.y + size * 1.2f), color);
     }
 }
