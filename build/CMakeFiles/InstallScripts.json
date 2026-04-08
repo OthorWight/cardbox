@@ -1,0 +1,9 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/ben/code/sol/build/cmake_install.cmake",
+		"/home/ben/code/sol/build/extern/glfw/cmake_install.cmake",
+		"/home/ben/code/sol/build/extern/glfw/src/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
