@@ -72,8 +72,12 @@ int main(int argc, char** argv) {
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
-        glClearColor(0.2f, 0.4f, 0.2f, 1.0f); // Green felt color
-        glClear(GL_COLOR_BUFFER_BIT);
+        
+        if (!game.IsWon()) {
+            glClearColor(0.2f, 0.4f, 0.2f, 1.0f); // Green felt color
+            glClear(GL_COLOR_BUFFER_BIT);
+        }
+        
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);

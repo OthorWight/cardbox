@@ -33,15 +33,28 @@ struct Pile {
     int id; // For identification
 };
 
+struct BouncingCard {
+    Card card;
+    ImVec2 pos;
+    ImVec2 velocity;
+};
+
 class Game {
 public:
     Game();
     void InitGame(GameType type);
     void UpdateAndDraw();
+    bool IsWon() const;
 
 private:
     GameType m_currentType;
     std::vector<Pile> m_piles;
+    
+    // Win state
+    bool m_isWon = false;
+    std::vector<BouncingCard> m_bouncingCards;
+    float m_winAnimTimer = 0.0f;
+    void UpdateWinAnimation(ImDrawList* drawList, float scale);
 
     // Dragging state
     int m_dragSourcePile = -1;

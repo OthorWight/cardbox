@@ -51,6 +51,9 @@ void Game::InitGame(GameType type) {
     m_dragSourcePile = -1;
     m_dragCardIndex = -1;
     m_dragCards.clear();
+    m_isWon = false;
+    m_bouncingCards.clear();
+    m_winAnimTimer = 0.0f;
 
     if (type == GameType::Klondike) {
         InitKlondike();
@@ -433,43 +436,57 @@ void Game::UpdateAndDraw() {
     // Offset for the menu bar height if necessary, but since it's full screen window we should just start below menu
     winPos.y += ImGui::GetFrameHeight(); 
 
+    // Check Win Condition
+    if (!m_isWon && m_currentType == GameType::Klondike) {
+        int foundationCount = 0;
+        for (const auto& p : m_piles) {
+            if (p.type == PileType::Foundation) foundationCount += p.cards.size();
+        }
+        if (foundationCount == 52) {
+            m_isWon = true;
+            m_winAnimTimer = 0.0f;
+            m_bouncingCards.clear();
+        }
+    }
+
     // Interaction vars
     int hoveredPile = -1;
     int hoveredCard = -1;
 
-    // 1. Calculate Hover Logic BEFORE Drawing
-    for (size_t i = 0; i < m_piles.size(); ++i) {
-        Pile& p = m_piles[i];
-        ImVec2 basePos = ImVec2(winPos.x + p.pos.x * scale, winPos.y + p.pos.y * scale);
-        ImVec2 pSize = ImVec2(p.size.x * scale, p.size.y * scale);
-        ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
+    if (!m_isWon) {
+        // 1. Calculate Hover Logic BEFORE Drawing
+        for (size_t i = 0; i < m_piles.size(); ++i) {
+            Pile& p = m_piles[i];
+            ImVec2 basePos = ImVec2(winPos.x + p.pos.x * scale, winPos.y + p.pos.y * scale);
+            ImVec2 pSize = ImVec2(p.size.x * scale, p.size.y * scale);
+            ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
 
-        if (p.cards.empty()) {
-            if (mousePos.x >= basePos.x && mousePos.x <= basePos.x + pSize.x &&
-                mousePos.y >= basePos.y && mousePos.y <= basePos.y + pSize.y) {
-                hoveredPile = (int)i;
-                hoveredCard = -1;
-            }
-        } else {
-            for (size_t c = 0; c < p.cards.size(); ++c) {
-                int drawIndex = (int)c;
-                if (p.type == PileType::Waste && p.cards.size() > 3) {
-                    drawIndex = std::max(0, (int)c - (int)(p.cards.size() - 3));
-                }
-
-                ImVec2 cardPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
-                if (mousePos.x >= cardPos.x && mousePos.x <= cardPos.x + pSize.x &&
-                    mousePos.y >= cardPos.y && mousePos.y <= cardPos.y + pSize.y) {
+            if (p.cards.empty()) {
+                if (mousePos.x >= basePos.x && mousePos.x <= basePos.x + pSize.x &&
+                    mousePos.y >= basePos.y && mousePos.y <= basePos.y + pSize.y) {
                     hoveredPile = (int)i;
-                    hoveredCard = (int)c;
+                    hoveredCard = -1;
+                }
+            } else {
+                for (size_t c = 0; c < p.cards.size(); ++c) {
+                    int drawIndex = (int)c;
+                    if (p.type == PileType::Waste && p.cards.size() > 3) {
+                        drawIndex = std::max(0, (int)c - (int)(p.cards.size() - 3));
+                    }
+
+                    ImVec2 cardPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
+                    if (mousePos.x >= cardPos.x && mousePos.x <= cardPos.x + pSize.x &&
+                        mousePos.y >= cardPos.y && mousePos.y <= cardPos.y + pSize.y) {
+                        hoveredPile = (int)i;
+                        hoveredCard = (int)c;
+                    }
                 }
             }
         }
-    }
 
-    // 2. Input Handling
-    // Dropping Dragged Cards
-    if (mouseReleased && m_dragSourcePile != -1) {
+        // 2. Input Handling
+        // Dropping Dragged Cards
+        if (mouseReleased && m_dragSourcePile != -1) {
         ImVec2 dragBasePos = ImVec2(mousePos.x - m_dragOffset.x, mousePos.y - m_dragOffset.y);
         ImVec2 dragCenter = ImVec2(dragBasePos.x + CARD_SIZE.x * scale * 0.5f, dragBasePos.y + CARD_SIZE.y * scale * 0.5f);
         
@@ -606,6 +623,7 @@ void Game::UpdateAndDraw() {
             }
         }
     }
+    } // End of if (!m_isWon)
 
     // 4. Draw piles
     // Draw in correct order, from bottom to top
@@ -673,6 +691,10 @@ void Game::UpdateAndDraw() {
             m_dragCards[c].animPos = cardPos; // Snap to mouse instantly
             DrawCard(drawList, cardPos, pSize, m_dragCards[c], scale, 1.0f, true);
         }
+    }
+
+    if (m_isWon) {
+        UpdateWinAnimation(drawList, scale);
     }
 }
 
@@ -814,5 +836,76 @@ void Game::DrawSuit(ImDrawList* drawList, const ImVec2& center, float size, Suit
         drawList->AddTriangleFilled(ImVec2(center.x, center.y + r * 0.2f), 
                                     ImVec2(center.x - r * 0.8f, center.y + size * 1.2f),
                                     ImVec2(center.x + r * 0.8f, center.y + size * 1.2f), color);
+    }
+}
+
+bool Game::IsWon() const {
+    return m_isWon;
+}
+
+void Game::UpdateWinAnimation(ImDrawList* drawList, float scale) {
+    ImVec2 winSize = ImGui::GetWindowSize();
+    ImVec2 winPos = ImGui::GetWindowPos();
+    float dt = ImGui::GetIO().DeltaTime;
+    
+    m_winAnimTimer -= dt;
+    
+    // Spawn a new bouncing card periodically from foundation piles
+    if (m_winAnimTimer <= 0.0f) {
+        // Find a foundation pile with cards
+        int foundPileIdx = -1;
+        for (int i = m_piles.size() - 1; i >= 0; --i) {
+            if (m_piles[i].type == PileType::Foundation && !m_piles[i].cards.empty()) {
+                foundPileIdx = i;
+                break;
+            }
+        }
+        
+        if (foundPileIdx != -1) {
+            Pile& p = m_piles[foundPileIdx];
+            Card c = p.cards.back();
+            p.cards.pop_back();
+            
+            BouncingCard bc;
+            bc.card = c;
+            ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
+            int drawIndex = p.cards.size(); // The position it was at
+            bc.pos = ImVec2(winPos.x + p.pos.x * scale + pOffset.x * drawIndex,
+                            winPos.y + p.pos.y * scale + pOffset.y * drawIndex);
+            
+            // Initial velocity: random x, up y
+            float vx = (rand() % 100 > 50 ? 1 : -1) * (200.0f + (rand() % 200)) * scale;
+            bc.velocity = ImVec2(vx, (-200.0f - (rand() % 400)) * scale);
+            
+            m_bouncingCards.push_back(bc);
+            m_winAnimTimer = 0.5f; // Wait before next card
+        }
+    }
+    
+    // Update and draw bouncing cards
+    float gravity = 900.0f * scale;
+    float bounceLoss = 0.8f;
+    ImVec2 pSize = ImVec2(CARD_SIZE.x * scale, CARD_SIZE.y * scale);
+    
+    for (auto& bc : m_bouncingCards) {
+        bc.velocity.y += gravity * dt;
+        bc.pos.x += bc.velocity.x * dt;
+        bc.pos.y += bc.velocity.y * dt;
+        
+        // Bounce off bottom
+        if (bc.pos.y + pSize.y > winPos.y + winSize.y) {
+            bc.pos.y = winPos.y + winSize.y - pSize.y;
+            bc.velocity.y = -bc.velocity.y * bounceLoss;
+        }
+        // Bounce off sides
+        if (bc.pos.x < winPos.x) {
+            bc.pos.x = winPos.x;
+            bc.velocity.x = -bc.velocity.x;
+        } else if (bc.pos.x + pSize.x > winPos.x + winSize.x) {
+            bc.pos.x = winPos.x + winSize.x - pSize.x;
+            bc.velocity.x = -bc.velocity.x;
+        }
+        
+        DrawCard(drawList, bc.pos, pSize, bc.card, scale, 1.0f, false);
     }
 }
