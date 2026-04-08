@@ -420,6 +420,10 @@ void Game::UpdateAndDraw() {
     ImGui::GetIO().FontGlobalScale = scale;
 
     // Menu bar
+    bool showHelpKlondike = false;
+    bool showHelpFreeCell = false;
+    bool showHelpSpider = false;
+
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Game")) {
             if (ImGui::MenuItem("New Klondike")) InitGame(GameType::Klondike);
@@ -429,7 +433,49 @@ void Game::UpdateAndDraw() {
             if (ImGui::MenuItem("Exit")) exit(0);
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Help")) {
+            if (ImGui::MenuItem("How to play Klondike")) showHelpKlondike = true;
+            if (ImGui::MenuItem("How to play FreeCell")) showHelpFreeCell = true;
+            if (ImGui::MenuItem("How to play Spider")) showHelpSpider = true;
+            ImGui::EndMenu();
+        }
         ImGui::EndMainMenuBar();
+    }
+
+    if (showHelpKlondike) ImGui::OpenPopup("Help: Klondike");
+    if (showHelpFreeCell) ImGui::OpenPopup("Help: FreeCell");
+    if (showHelpSpider) ImGui::OpenPopup("Help: Spider");
+
+    if (ImGui::BeginPopupModal("Help: Klondike", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Klondike Solitaire");
+        ImGui::Separator();
+        ImGui::Text("Goal: Move all 52 cards to the four foundation piles at the top right.");
+        ImGui::Text("Foundations are built up by suit, from Ace to King.");
+        ImGui::Text("Tableau piles can be built down by alternating colors.");
+        ImGui::Text("Click the stock pile (top left) to deal more cards.");
+        if (ImGui::Button("Close", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginPopupModal("Help: FreeCell", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("FreeCell Solitaire");
+        ImGui::Separator();
+        ImGui::Text("Goal: Move all cards to the four foundation piles at the top right.");
+        ImGui::Text("Foundations are built up by suit, from Ace to King.");
+        ImGui::Text("Tableau piles can be built down by alternating colors.");
+        ImGui::Text("Use the four free cells (top left) to temporarily store single cards.");
+        if (ImGui::Button("Close", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginPopupModal("Help: Spider", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Spider Solitaire");
+        ImGui::Separator();
+        ImGui::Text("Goal: Assemble 13 cards of a suit, in descending sequence from King to Ace.");
+        ImGui::Text("Once a full suit is assembled, it is removed from play.");
+        ImGui::Text("Cards can be moved to other tableau columns if they are exactly one lower in rank.");
+        if (ImGui::Button("Close", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
     }
 
     ImVec2 winPos = ImGui::GetWindowPos();
