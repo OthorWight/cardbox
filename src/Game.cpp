@@ -106,10 +106,14 @@ void Game::ShuffleDeck(std::vector<Card>& deck) {
 
 void Game::LoadAvailableGames() {
     m_availableGames.clear();
-    if (std::filesystem::exists("rules")) {
-        for (const auto& entry : std::filesystem::directory_iterator("rules")) {
-            if (entry.path().extension() == ".lua") {
-                m_availableGames.push_back(entry.path().string());
+
+    std::vector<std::string> searchPaths = { "rules", "src" };
+    for (const auto& path : searchPaths) {
+        if (std::filesystem::exists(path)) {
+            for (const auto& entry : std::filesystem::directory_iterator(path)) {
+                if (entry.path().extension() == ".lua") {
+                    m_availableGames.push_back(entry.path().string());
+                }
             }
         }
     }
@@ -442,7 +446,8 @@ void Game::UpdateAndDraw() {
     } // End of if (!m_isWon)
 
     // 4. Draw piles
-    if (!m_isWon) {
+    bool cardsAnimating = false;
+    {
         // Draw in correct order, from bottom to top
         float dt = ImGui::GetIO().DeltaTime;
         float animSpeed = 15.0f * dt;
@@ -478,15 +483,21 @@ void Game::UpdateAndDraw() {
                     } else {
                         cardRef.animPos.x += (cardPos.x - cardRef.animPos.x) * animSpeed;
                         cardRef.animPos.y += (cardPos.y - cardRef.animPos.y) * animSpeed;
+
+                        if (std::abs(cardRef.animPos.x - cardPos.x) > 1.0f || std::abs(cardRef.animPos.y - cardPos.y) > 1.0f) {
+                            cardsAnimating = true;
+                        }
                     }
 
                     float targetFlip = cardRef.faceUp ? 1.0f : -1.0f;
                     if (cardRef.flipVisual < targetFlip) {
                         cardRef.flipVisual += flipSpeed;
                         if (cardRef.flipVisual > targetFlip) cardRef.flipVisual = targetFlip;
+                        cardsAnimating = true;
                     } else if (cardRef.flipVisual > targetFlip) {
                         cardRef.flipVisual -= flipSpeed;
                         if (cardRef.flipVisual < targetFlip) cardRef.flipVisual = targetFlip;
+                        cardsAnimating = true;
                     }
 
                     if (cardRef.flipVisual > 0.0f) {
@@ -511,7 +522,7 @@ void Game::UpdateAndDraw() {
         }
     }
 
-    if (m_isWon) {
+    if (m_isWon && !cardsAnimating) {
         UpdateWinAnimation(drawList, scale);
     }
 }

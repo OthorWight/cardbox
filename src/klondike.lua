@@ -11,12 +11,11 @@ function Init(piles, deck)
     stock.pos = ImVec2.new(startX, startY)
     stock.size = ImVec2.new(100.0, 140.0)
     stock.offset = ImVec2.new(0.5, 0.5)
-    stock.cards = deck
     piles:push_back(stock)
 
     local waste = Pile.new()
     waste.id = 1; waste.type = PileType.Waste
-    waste.pos = ImVec2.new(startX + padX, startY)
+    waste.pos = ImVec2.new(startX + padX + 20, startY)
     waste.size = ImVec2.new(100.0, 140.0)
     waste.offset = ImVec2.new(20.0, 0.0)
     piles:push_back(waste)
@@ -33,18 +32,21 @@ function Init(piles, deck)
     for i = 0, 6 do
         local tab = Pile.new()
         tab.id = 6 + i; tab.type = PileType.Tableau
-        tab.pos = ImVec2.new(startX + padX * i, startY + 140.0 + 30.0)
+        tab.pos = ImVec2.new(startX + padX * i, startY + 140.0 + 60.0)
         tab.size = ImVec2.new(100.0, 140.0)
         tab.offset = ImVec2.new(0.0, 25.0)
 
         for j = 0, i do
-            local c = stock.cards:back()
-            stock.cards:pop_back()
+            local c = deck:back()
+            deck:pop_back()
             c.faceUp = (j == i)
             tab.cards:push_back(c)
         end
         piles:push_back(tab)
     end
+
+    -- Finally, put the remaining cards into the stock pile
+    piles:get(0).cards = deck
 end
 
 function CanPickup(piles, pileIdx, cardIdx)

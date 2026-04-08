@@ -78,3 +78,10 @@ target_link_libraries(solitaire PRIVATE
 if (UNIX AND NOT APPLE)
     target_link_libraries(solitaire PRIVATE dl pthread)
 endif()
+
+# Copy Lua scripts to a rules/ folder next to the executable
+file(GLOB LUA_SCRIPTS "src/*.lua")
+add_custom_command(TARGET solitaire POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/rules
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LUA_SCRIPTS} ${CMAKE_CURRENT_BINARY_DIR}/rules/
+)
