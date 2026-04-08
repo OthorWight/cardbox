@@ -415,8 +415,8 @@ void Game::UpdateAndDraw() {
     ImDrawList* drawList = ImGui::GetWindowDrawList();
     ImVec2 mousePos = ImGui::GetMousePos();
     bool mouseClicked = ImGui::IsMouseClicked(0);
-    bool doubleClicked = ImGui::IsMouseDoubleClicked(0);
     bool mouseReleased = ImGui::IsMouseReleased(0);
+    bool rightClicked = ImGui::IsMouseClicked(1);
 
     // Calculate scale based on window width (1280 is our reference width)
     float scale = ImGui::GetWindowWidth() / 1280.0f;
@@ -433,10 +433,17 @@ void Game::UpdateAndDraw() {
     if (ImGui::IsKeyPressed(ImGuiKey_Z) && ImGui::GetIO().KeyCtrl) {
         doUndo = true;
     }
+    if (ImGui::IsMouseClicked(3)) { // Mouse Backward Button
+        doUndo = true;
+    }
+    if (ImGui::IsKeyPressed(ImGuiKey_F2)) {
+        InitGame(m_currentType);
+    }
 
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Game")) {
             if (ImGui::MenuItem("Undo", "Ctrl+Z", false, !m_undoStack.empty())) doUndo = true;
+            if (ImGui::MenuItem("Restart Game", "F2")) InitGame(m_currentType);
             ImGui::Separator();
             if (ImGui::MenuItem("New Klondike")) InitGame(GameType::Klondike);
             if (ImGui::MenuItem("New FreeCell")) InitGame(GameType::FreeCell);
@@ -625,8 +632,8 @@ void Game::UpdateAndDraw() {
         m_dragCards.clear();
     }
 
-    // Double click auto-move
-    if (doubleClicked && hoveredPile != -1 && hoveredCard != -1 && m_dragSourcePile == -1) {
+    // Right-click auto-move
+    if (rightClicked && hoveredPile != -1 && hoveredCard != -1 && m_dragSourcePile == -1) {
         if (CanPickup(hoveredPile, hoveredCard)) {
             std::vector<Card> stack(m_piles[hoveredPile].cards.begin() + hoveredCard, m_piles[hoveredPile].cards.end());
             int bestDrop = -1;
@@ -669,6 +676,17 @@ void Game::UpdateAndDraw() {
         }
     }
 
+    // Cancel drag with Escape or Right Click
+    if (m_dragSourcePile != -1 && (ImGui::IsKeyPressed(ImGuiKey_Escape) || rightClicked)) {
+        Pile& sp = m_piles[m_dragSourcePile];
+        for (size_t i = 0; i < m_dragCards.size(); ++i) {
+            sp.cards[m_dragCardIndex + i].animPos = m_dragCards[i].animPos;
+        }
+        m_dragSourcePile = -1;
+        m_dragCardIndex = -1;
+        m_dragCards.clear();
+    }
+
     // 3. Auto Solve (Klondike)
     if (m_currentType == GameType::Klondike && m_dragSourcePile == -1) {
         bool allFaceUp = true;
@@ -700,7 +718,7 @@ void Game::UpdateAndDraw() {
                     bool moved = false;
                     for (size_t f = 0; f < m_piles.size(); ++f) {
                         if (m_piles[f].type == PileType::Foundation && CanDrop((int)i, stack, (int)f)) {
-                            SaveStateForUndo();
+                            // Do not SaveStateForUndo() here to avoid flooding the undo stack with single auto-moves
                             DoMove((int)i, (int)f, cardIdx);
                             moved = true;
                             break;
