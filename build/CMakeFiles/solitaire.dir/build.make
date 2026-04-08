@@ -209,9 +209,11 @@ solitaire: CMakeFiles/solitaire.dir/extern/imgui/backends/imgui_impl_opengl3.cpp
 solitaire: CMakeFiles/solitaire.dir/build.make
 solitaire: CMakeFiles/solitaire.dir/compiler_depend.ts
 solitaire: extern/glfw/src/libglfw3.a
-solitaire: /usr/lib/x86_64-linux-gnu/libGL.so
+solitaire: liblua_static.a
 solitaire: /usr/lib/x86_64-linux-gnu/librt.a
 solitaire: /usr/lib/x86_64-linux-gnu/libm.so
+solitaire: /usr/lib/x86_64-linux-gnu/libGLX.so
+solitaire: /usr/lib/x86_64-linux-gnu/libOpenGL.so
 solitaire: CMakeFiles/solitaire.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/ben/code/sol/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Linking CXX executable solitaire"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/solitaire.dir/link.txt --verbose=$(VERBOSE)

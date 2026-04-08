@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/ben/code/sol/extern/imgui -I/home/ben/code/sol/extern/imgui/backends -I/home/ben/code/sol/extern/glfw/include
+CXX_INCLUDES = -I/home/ben/code/sol/extern/imgui -I/home/ben/code/sol/extern/imgui/backends -I/include -I/home/ben/code/sol/extern/glfw/include -I/home/ben/code/sol/build/_deps/lua-src/src -isystem /home/ben/code/sol/build/_deps/sol2-src/include
 
 CXX_FLAGS = -std=gnu++17
 

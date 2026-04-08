@@ -3,7 +3,15 @@
 #include <vector>
 #include <string>
 #include "imgui.h"
+
+#if defined(__GNUC__) && __GNUC__ >= 15
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtemplate-body"
+#endif
 #include <sol/sol.hpp>
+#if defined(__GNUC__) && __GNUC__ >= 15
+#pragma GCC diagnostic pop
+#endif
 
 enum class Suit { Hearts, Diamonds, Clubs, Spades };
 enum class Rank { Ace = 1, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King };
@@ -22,6 +30,15 @@ struct Card {
     // Helper functions
     bool IsRed() const { return suit == Suit::Hearts || suit == Suit::Diamonds; }
     int Color() const { return IsRed() ? 1 : 0; }
+
+    // Comparison operators for sol2 bindings
+    bool operator==(const Card& other) const {
+        return rank == other.rank && suit == other.suit && faceUp == other.faceUp;
+    }
+    bool operator<(const Card& other) const {
+        if (suit != other.suit) return suit < other.suit;
+        return rank < other.rank;
+    }
 };
 
 struct Pile {
@@ -31,6 +48,14 @@ struct Pile {
     ImVec2 offset; // Offset between consecutive cards in the pile
     PileType type;
     int id; // For identification
+
+    // Comparison operators for sol2 bindings
+    bool operator==(const Pile& other) const {
+        return id == other.id;
+    }
+    bool operator<(const Pile& other) const {
+        return id < other.id;
+    }
 };
 
 struct BouncingCard {

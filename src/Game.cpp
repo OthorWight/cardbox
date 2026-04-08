@@ -55,10 +55,10 @@ void Game::SetupLuaBindings() {
         "size", &std::vector<Card>::size,
         "empty", &std::vector<Card>::empty,
         "clear", &std::vector<Card>::clear,
-        "push_back", &std::vector<Card>::push_back,
-        "pop_back", &std::vector<Card>::pop_back,
-        "back", sol::resolve<Card&()>(&std::vector<Card>::back),
-        "front", sol::resolve<Card&()>(&std::vector<Card>::front),
+        "push_back", [](std::vector<Card>& v, const Card& c) { v.push_back(c); },
+        "pop_back", [](std::vector<Card>& v) { v.pop_back(); },
+        "back", [](std::vector<Card>& v) -> Card& { return v.back(); },
+        "front", [](std::vector<Card>& v) -> Card& { return v.front(); },
         "get", [](std::vector<Card>& v, int i) -> Card& { return v[i]; }
     );
 
@@ -76,7 +76,7 @@ void Game::SetupLuaBindings() {
         "size", &std::vector<Pile>::size,
         "empty", &std::vector<Pile>::empty,
         "clear", &std::vector<Pile>::clear,
-        "push_back", &std::vector<Pile>::push_back,
+        "push_back", [](std::vector<Pile>& v, const Pile& p) { v.push_back(p); },
         "get", [](std::vector<Pile>& v, int i) -> Pile& { return v[i]; }
     );
 }

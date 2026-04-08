@@ -158,8 +158,22 @@ preinstall/fast:
 
 # clear depends
 depend:
+	$(CMAKE_COMMAND) -P /home/ben/code/sol/build/CMakeFiles/VerifyGlobs.cmake
 	$(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
+
+#=============================================================================
+# Target rules for targets named lua_static
+
+# Build rule for target.
+lua_static: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 lua_static
+.PHONY : lua_static
+
+# fast build rule for target.
+lua_static/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/build
+.PHONY : lua_static/fast
 
 #=============================================================================
 # Target rules for targets named solitaire
@@ -173,6 +187,370 @@ solitaire: cmake_check_build_system
 solitaire/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/solitaire.dir/build.make CMakeFiles/solitaire.dir/build
 .PHONY : solitaire/fast
+
+#=============================================================================
+# Target rules for targets named Experimental
+
+# Build rule for target.
+Experimental: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 Experimental
+.PHONY : Experimental
+
+# fast build rule for target.
+Experimental/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/Experimental.dir/build.make _deps/sol2-build/CMakeFiles/Experimental.dir/build
+.PHONY : Experimental/fast
+
+#=============================================================================
+# Target rules for targets named Nightly
+
+# Build rule for target.
+Nightly: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 Nightly
+.PHONY : Nightly
+
+# fast build rule for target.
+Nightly/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/Nightly.dir/build.make _deps/sol2-build/CMakeFiles/Nightly.dir/build
+.PHONY : Nightly/fast
+
+#=============================================================================
+# Target rules for targets named Continuous
+
+# Build rule for target.
+Continuous: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 Continuous
+.PHONY : Continuous
+
+# fast build rule for target.
+Continuous/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/Continuous.dir/build.make _deps/sol2-build/CMakeFiles/Continuous.dir/build
+.PHONY : Continuous/fast
+
+#=============================================================================
+# Target rules for targets named NightlyMemoryCheck
+
+# Build rule for target.
+NightlyMemoryCheck: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 NightlyMemoryCheck
+.PHONY : NightlyMemoryCheck
+
+# fast build rule for target.
+NightlyMemoryCheck/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/NightlyMemoryCheck.dir/build.make _deps/sol2-build/CMakeFiles/NightlyMemoryCheck.dir/build
+.PHONY : NightlyMemoryCheck/fast
+
+#=============================================================================
+# Target rules for targets named NightlyStart
+
+# Build rule for target.
+NightlyStart: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 NightlyStart
+.PHONY : NightlyStart
+
+# fast build rule for target.
+NightlyStart/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/NightlyStart.dir/build.make _deps/sol2-build/CMakeFiles/NightlyStart.dir/build
+.PHONY : NightlyStart/fast
+
+#=============================================================================
+# Target rules for targets named NightlyUpdate
+
+# Build rule for target.
+NightlyUpdate: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 NightlyUpdate
+.PHONY : NightlyUpdate
+
+# fast build rule for target.
+NightlyUpdate/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/NightlyUpdate.dir/build.make _deps/sol2-build/CMakeFiles/NightlyUpdate.dir/build
+.PHONY : NightlyUpdate/fast
+
+#=============================================================================
+# Target rules for targets named NightlyConfigure
+
+# Build rule for target.
+NightlyConfigure: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 NightlyConfigure
+.PHONY : NightlyConfigure
+
+# fast build rule for target.
+NightlyConfigure/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/NightlyConfigure.dir/build.make _deps/sol2-build/CMakeFiles/NightlyConfigure.dir/build
+.PHONY : NightlyConfigure/fast
+
+#=============================================================================
+# Target rules for targets named NightlyBuild
+
+# Build rule for target.
+NightlyBuild: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 NightlyBuild
+.PHONY : NightlyBuild
+
+# fast build rule for target.
+NightlyBuild/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/NightlyBuild.dir/build.make _deps/sol2-build/CMakeFiles/NightlyBuild.dir/build
+.PHONY : NightlyBuild/fast
+
+#=============================================================================
+# Target rules for targets named NightlyTest
+
+# Build rule for target.
+NightlyTest: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 NightlyTest
+.PHONY : NightlyTest
+
+# fast build rule for target.
+NightlyTest/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/NightlyTest.dir/build.make _deps/sol2-build/CMakeFiles/NightlyTest.dir/build
+.PHONY : NightlyTest/fast
+
+#=============================================================================
+# Target rules for targets named NightlyCoverage
+
+# Build rule for target.
+NightlyCoverage: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 NightlyCoverage
+.PHONY : NightlyCoverage
+
+# fast build rule for target.
+NightlyCoverage/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/NightlyCoverage.dir/build.make _deps/sol2-build/CMakeFiles/NightlyCoverage.dir/build
+.PHONY : NightlyCoverage/fast
+
+#=============================================================================
+# Target rules for targets named NightlyMemCheck
+
+# Build rule for target.
+NightlyMemCheck: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 NightlyMemCheck
+.PHONY : NightlyMemCheck
+
+# fast build rule for target.
+NightlyMemCheck/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/NightlyMemCheck.dir/build.make _deps/sol2-build/CMakeFiles/NightlyMemCheck.dir/build
+.PHONY : NightlyMemCheck/fast
+
+#=============================================================================
+# Target rules for targets named NightlySubmit
+
+# Build rule for target.
+NightlySubmit: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 NightlySubmit
+.PHONY : NightlySubmit
+
+# fast build rule for target.
+NightlySubmit/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/NightlySubmit.dir/build.make _deps/sol2-build/CMakeFiles/NightlySubmit.dir/build
+.PHONY : NightlySubmit/fast
+
+#=============================================================================
+# Target rules for targets named ExperimentalStart
+
+# Build rule for target.
+ExperimentalStart: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ExperimentalStart
+.PHONY : ExperimentalStart
+
+# fast build rule for target.
+ExperimentalStart/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ExperimentalStart.dir/build.make _deps/sol2-build/CMakeFiles/ExperimentalStart.dir/build
+.PHONY : ExperimentalStart/fast
+
+#=============================================================================
+# Target rules for targets named ExperimentalUpdate
+
+# Build rule for target.
+ExperimentalUpdate: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ExperimentalUpdate
+.PHONY : ExperimentalUpdate
+
+# fast build rule for target.
+ExperimentalUpdate/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ExperimentalUpdate.dir/build.make _deps/sol2-build/CMakeFiles/ExperimentalUpdate.dir/build
+.PHONY : ExperimentalUpdate/fast
+
+#=============================================================================
+# Target rules for targets named ExperimentalConfigure
+
+# Build rule for target.
+ExperimentalConfigure: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ExperimentalConfigure
+.PHONY : ExperimentalConfigure
+
+# fast build rule for target.
+ExperimentalConfigure/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ExperimentalConfigure.dir/build.make _deps/sol2-build/CMakeFiles/ExperimentalConfigure.dir/build
+.PHONY : ExperimentalConfigure/fast
+
+#=============================================================================
+# Target rules for targets named ExperimentalBuild
+
+# Build rule for target.
+ExperimentalBuild: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ExperimentalBuild
+.PHONY : ExperimentalBuild
+
+# fast build rule for target.
+ExperimentalBuild/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ExperimentalBuild.dir/build.make _deps/sol2-build/CMakeFiles/ExperimentalBuild.dir/build
+.PHONY : ExperimentalBuild/fast
+
+#=============================================================================
+# Target rules for targets named ExperimentalTest
+
+# Build rule for target.
+ExperimentalTest: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ExperimentalTest
+.PHONY : ExperimentalTest
+
+# fast build rule for target.
+ExperimentalTest/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ExperimentalTest.dir/build.make _deps/sol2-build/CMakeFiles/ExperimentalTest.dir/build
+.PHONY : ExperimentalTest/fast
+
+#=============================================================================
+# Target rules for targets named ExperimentalCoverage
+
+# Build rule for target.
+ExperimentalCoverage: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ExperimentalCoverage
+.PHONY : ExperimentalCoverage
+
+# fast build rule for target.
+ExperimentalCoverage/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ExperimentalCoverage.dir/build.make _deps/sol2-build/CMakeFiles/ExperimentalCoverage.dir/build
+.PHONY : ExperimentalCoverage/fast
+
+#=============================================================================
+# Target rules for targets named ExperimentalMemCheck
+
+# Build rule for target.
+ExperimentalMemCheck: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ExperimentalMemCheck
+.PHONY : ExperimentalMemCheck
+
+# fast build rule for target.
+ExperimentalMemCheck/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ExperimentalMemCheck.dir/build.make _deps/sol2-build/CMakeFiles/ExperimentalMemCheck.dir/build
+.PHONY : ExperimentalMemCheck/fast
+
+#=============================================================================
+# Target rules for targets named ExperimentalSubmit
+
+# Build rule for target.
+ExperimentalSubmit: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ExperimentalSubmit
+.PHONY : ExperimentalSubmit
+
+# fast build rule for target.
+ExperimentalSubmit/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ExperimentalSubmit.dir/build.make _deps/sol2-build/CMakeFiles/ExperimentalSubmit.dir/build
+.PHONY : ExperimentalSubmit/fast
+
+#=============================================================================
+# Target rules for targets named ContinuousStart
+
+# Build rule for target.
+ContinuousStart: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ContinuousStart
+.PHONY : ContinuousStart
+
+# fast build rule for target.
+ContinuousStart/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ContinuousStart.dir/build.make _deps/sol2-build/CMakeFiles/ContinuousStart.dir/build
+.PHONY : ContinuousStart/fast
+
+#=============================================================================
+# Target rules for targets named ContinuousUpdate
+
+# Build rule for target.
+ContinuousUpdate: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ContinuousUpdate
+.PHONY : ContinuousUpdate
+
+# fast build rule for target.
+ContinuousUpdate/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ContinuousUpdate.dir/build.make _deps/sol2-build/CMakeFiles/ContinuousUpdate.dir/build
+.PHONY : ContinuousUpdate/fast
+
+#=============================================================================
+# Target rules for targets named ContinuousConfigure
+
+# Build rule for target.
+ContinuousConfigure: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ContinuousConfigure
+.PHONY : ContinuousConfigure
+
+# fast build rule for target.
+ContinuousConfigure/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ContinuousConfigure.dir/build.make _deps/sol2-build/CMakeFiles/ContinuousConfigure.dir/build
+.PHONY : ContinuousConfigure/fast
+
+#=============================================================================
+# Target rules for targets named ContinuousBuild
+
+# Build rule for target.
+ContinuousBuild: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ContinuousBuild
+.PHONY : ContinuousBuild
+
+# fast build rule for target.
+ContinuousBuild/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ContinuousBuild.dir/build.make _deps/sol2-build/CMakeFiles/ContinuousBuild.dir/build
+.PHONY : ContinuousBuild/fast
+
+#=============================================================================
+# Target rules for targets named ContinuousTest
+
+# Build rule for target.
+ContinuousTest: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ContinuousTest
+.PHONY : ContinuousTest
+
+# fast build rule for target.
+ContinuousTest/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ContinuousTest.dir/build.make _deps/sol2-build/CMakeFiles/ContinuousTest.dir/build
+.PHONY : ContinuousTest/fast
+
+#=============================================================================
+# Target rules for targets named ContinuousCoverage
+
+# Build rule for target.
+ContinuousCoverage: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ContinuousCoverage
+.PHONY : ContinuousCoverage
+
+# fast build rule for target.
+ContinuousCoverage/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ContinuousCoverage.dir/build.make _deps/sol2-build/CMakeFiles/ContinuousCoverage.dir/build
+.PHONY : ContinuousCoverage/fast
+
+#=============================================================================
+# Target rules for targets named ContinuousMemCheck
+
+# Build rule for target.
+ContinuousMemCheck: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ContinuousMemCheck
+.PHONY : ContinuousMemCheck
+
+# fast build rule for target.
+ContinuousMemCheck/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ContinuousMemCheck.dir/build.make _deps/sol2-build/CMakeFiles/ContinuousMemCheck.dir/build
+.PHONY : ContinuousMemCheck/fast
+
+#=============================================================================
+# Target rules for targets named ContinuousSubmit
+
+# Build rule for target.
+ContinuousSubmit: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ContinuousSubmit
+.PHONY : ContinuousSubmit
+
+# fast build rule for target.
+ContinuousSubmit/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/sol2-build/CMakeFiles/ContinuousSubmit.dir/build.make _deps/sol2-build/CMakeFiles/ContinuousSubmit.dir/build
+.PHONY : ContinuousSubmit/fast
 
 #=============================================================================
 # Target rules for targets named uninstall
@@ -212,6 +590,798 @@ update_mappings: cmake_check_build_system
 update_mappings/fast:
 	$(MAKE) $(MAKESILENT) -f extern/glfw/src/CMakeFiles/update_mappings.dir/build.make extern/glfw/src/CMakeFiles/update_mappings.dir/build
 .PHONY : update_mappings/fast
+
+_deps/lua-src/src/lapi.o: _deps/lua-src/src/lapi.c.o
+.PHONY : _deps/lua-src/src/lapi.o
+
+# target to build an object file
+_deps/lua-src/src/lapi.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lapi.c.o
+.PHONY : _deps/lua-src/src/lapi.c.o
+
+_deps/lua-src/src/lapi.i: _deps/lua-src/src/lapi.c.i
+.PHONY : _deps/lua-src/src/lapi.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lapi.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lapi.c.i
+.PHONY : _deps/lua-src/src/lapi.c.i
+
+_deps/lua-src/src/lapi.s: _deps/lua-src/src/lapi.c.s
+.PHONY : _deps/lua-src/src/lapi.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lapi.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lapi.c.s
+.PHONY : _deps/lua-src/src/lapi.c.s
+
+_deps/lua-src/src/lauxlib.o: _deps/lua-src/src/lauxlib.c.o
+.PHONY : _deps/lua-src/src/lauxlib.o
+
+# target to build an object file
+_deps/lua-src/src/lauxlib.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lauxlib.c.o
+.PHONY : _deps/lua-src/src/lauxlib.c.o
+
+_deps/lua-src/src/lauxlib.i: _deps/lua-src/src/lauxlib.c.i
+.PHONY : _deps/lua-src/src/lauxlib.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lauxlib.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lauxlib.c.i
+.PHONY : _deps/lua-src/src/lauxlib.c.i
+
+_deps/lua-src/src/lauxlib.s: _deps/lua-src/src/lauxlib.c.s
+.PHONY : _deps/lua-src/src/lauxlib.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lauxlib.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lauxlib.c.s
+.PHONY : _deps/lua-src/src/lauxlib.c.s
+
+_deps/lua-src/src/lbaselib.o: _deps/lua-src/src/lbaselib.c.o
+.PHONY : _deps/lua-src/src/lbaselib.o
+
+# target to build an object file
+_deps/lua-src/src/lbaselib.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lbaselib.c.o
+.PHONY : _deps/lua-src/src/lbaselib.c.o
+
+_deps/lua-src/src/lbaselib.i: _deps/lua-src/src/lbaselib.c.i
+.PHONY : _deps/lua-src/src/lbaselib.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lbaselib.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lbaselib.c.i
+.PHONY : _deps/lua-src/src/lbaselib.c.i
+
+_deps/lua-src/src/lbaselib.s: _deps/lua-src/src/lbaselib.c.s
+.PHONY : _deps/lua-src/src/lbaselib.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lbaselib.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lbaselib.c.s
+.PHONY : _deps/lua-src/src/lbaselib.c.s
+
+_deps/lua-src/src/lbitlib.o: _deps/lua-src/src/lbitlib.c.o
+.PHONY : _deps/lua-src/src/lbitlib.o
+
+# target to build an object file
+_deps/lua-src/src/lbitlib.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lbitlib.c.o
+.PHONY : _deps/lua-src/src/lbitlib.c.o
+
+_deps/lua-src/src/lbitlib.i: _deps/lua-src/src/lbitlib.c.i
+.PHONY : _deps/lua-src/src/lbitlib.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lbitlib.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lbitlib.c.i
+.PHONY : _deps/lua-src/src/lbitlib.c.i
+
+_deps/lua-src/src/lbitlib.s: _deps/lua-src/src/lbitlib.c.s
+.PHONY : _deps/lua-src/src/lbitlib.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lbitlib.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lbitlib.c.s
+.PHONY : _deps/lua-src/src/lbitlib.c.s
+
+_deps/lua-src/src/lcode.o: _deps/lua-src/src/lcode.c.o
+.PHONY : _deps/lua-src/src/lcode.o
+
+# target to build an object file
+_deps/lua-src/src/lcode.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lcode.c.o
+.PHONY : _deps/lua-src/src/lcode.c.o
+
+_deps/lua-src/src/lcode.i: _deps/lua-src/src/lcode.c.i
+.PHONY : _deps/lua-src/src/lcode.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lcode.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lcode.c.i
+.PHONY : _deps/lua-src/src/lcode.c.i
+
+_deps/lua-src/src/lcode.s: _deps/lua-src/src/lcode.c.s
+.PHONY : _deps/lua-src/src/lcode.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lcode.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lcode.c.s
+.PHONY : _deps/lua-src/src/lcode.c.s
+
+_deps/lua-src/src/lcorolib.o: _deps/lua-src/src/lcorolib.c.o
+.PHONY : _deps/lua-src/src/lcorolib.o
+
+# target to build an object file
+_deps/lua-src/src/lcorolib.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lcorolib.c.o
+.PHONY : _deps/lua-src/src/lcorolib.c.o
+
+_deps/lua-src/src/lcorolib.i: _deps/lua-src/src/lcorolib.c.i
+.PHONY : _deps/lua-src/src/lcorolib.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lcorolib.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lcorolib.c.i
+.PHONY : _deps/lua-src/src/lcorolib.c.i
+
+_deps/lua-src/src/lcorolib.s: _deps/lua-src/src/lcorolib.c.s
+.PHONY : _deps/lua-src/src/lcorolib.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lcorolib.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lcorolib.c.s
+.PHONY : _deps/lua-src/src/lcorolib.c.s
+
+_deps/lua-src/src/lctype.o: _deps/lua-src/src/lctype.c.o
+.PHONY : _deps/lua-src/src/lctype.o
+
+# target to build an object file
+_deps/lua-src/src/lctype.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lctype.c.o
+.PHONY : _deps/lua-src/src/lctype.c.o
+
+_deps/lua-src/src/lctype.i: _deps/lua-src/src/lctype.c.i
+.PHONY : _deps/lua-src/src/lctype.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lctype.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lctype.c.i
+.PHONY : _deps/lua-src/src/lctype.c.i
+
+_deps/lua-src/src/lctype.s: _deps/lua-src/src/lctype.c.s
+.PHONY : _deps/lua-src/src/lctype.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lctype.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lctype.c.s
+.PHONY : _deps/lua-src/src/lctype.c.s
+
+_deps/lua-src/src/ldblib.o: _deps/lua-src/src/ldblib.c.o
+.PHONY : _deps/lua-src/src/ldblib.o
+
+# target to build an object file
+_deps/lua-src/src/ldblib.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ldblib.c.o
+.PHONY : _deps/lua-src/src/ldblib.c.o
+
+_deps/lua-src/src/ldblib.i: _deps/lua-src/src/ldblib.c.i
+.PHONY : _deps/lua-src/src/ldblib.i
+
+# target to preprocess a source file
+_deps/lua-src/src/ldblib.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ldblib.c.i
+.PHONY : _deps/lua-src/src/ldblib.c.i
+
+_deps/lua-src/src/ldblib.s: _deps/lua-src/src/ldblib.c.s
+.PHONY : _deps/lua-src/src/ldblib.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/ldblib.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ldblib.c.s
+.PHONY : _deps/lua-src/src/ldblib.c.s
+
+_deps/lua-src/src/ldebug.o: _deps/lua-src/src/ldebug.c.o
+.PHONY : _deps/lua-src/src/ldebug.o
+
+# target to build an object file
+_deps/lua-src/src/ldebug.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ldebug.c.o
+.PHONY : _deps/lua-src/src/ldebug.c.o
+
+_deps/lua-src/src/ldebug.i: _deps/lua-src/src/ldebug.c.i
+.PHONY : _deps/lua-src/src/ldebug.i
+
+# target to preprocess a source file
+_deps/lua-src/src/ldebug.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ldebug.c.i
+.PHONY : _deps/lua-src/src/ldebug.c.i
+
+_deps/lua-src/src/ldebug.s: _deps/lua-src/src/ldebug.c.s
+.PHONY : _deps/lua-src/src/ldebug.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/ldebug.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ldebug.c.s
+.PHONY : _deps/lua-src/src/ldebug.c.s
+
+_deps/lua-src/src/ldo.o: _deps/lua-src/src/ldo.c.o
+.PHONY : _deps/lua-src/src/ldo.o
+
+# target to build an object file
+_deps/lua-src/src/ldo.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ldo.c.o
+.PHONY : _deps/lua-src/src/ldo.c.o
+
+_deps/lua-src/src/ldo.i: _deps/lua-src/src/ldo.c.i
+.PHONY : _deps/lua-src/src/ldo.i
+
+# target to preprocess a source file
+_deps/lua-src/src/ldo.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ldo.c.i
+.PHONY : _deps/lua-src/src/ldo.c.i
+
+_deps/lua-src/src/ldo.s: _deps/lua-src/src/ldo.c.s
+.PHONY : _deps/lua-src/src/ldo.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/ldo.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ldo.c.s
+.PHONY : _deps/lua-src/src/ldo.c.s
+
+_deps/lua-src/src/ldump.o: _deps/lua-src/src/ldump.c.o
+.PHONY : _deps/lua-src/src/ldump.o
+
+# target to build an object file
+_deps/lua-src/src/ldump.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ldump.c.o
+.PHONY : _deps/lua-src/src/ldump.c.o
+
+_deps/lua-src/src/ldump.i: _deps/lua-src/src/ldump.c.i
+.PHONY : _deps/lua-src/src/ldump.i
+
+# target to preprocess a source file
+_deps/lua-src/src/ldump.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ldump.c.i
+.PHONY : _deps/lua-src/src/ldump.c.i
+
+_deps/lua-src/src/ldump.s: _deps/lua-src/src/ldump.c.s
+.PHONY : _deps/lua-src/src/ldump.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/ldump.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ldump.c.s
+.PHONY : _deps/lua-src/src/ldump.c.s
+
+_deps/lua-src/src/lfunc.o: _deps/lua-src/src/lfunc.c.o
+.PHONY : _deps/lua-src/src/lfunc.o
+
+# target to build an object file
+_deps/lua-src/src/lfunc.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lfunc.c.o
+.PHONY : _deps/lua-src/src/lfunc.c.o
+
+_deps/lua-src/src/lfunc.i: _deps/lua-src/src/lfunc.c.i
+.PHONY : _deps/lua-src/src/lfunc.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lfunc.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lfunc.c.i
+.PHONY : _deps/lua-src/src/lfunc.c.i
+
+_deps/lua-src/src/lfunc.s: _deps/lua-src/src/lfunc.c.s
+.PHONY : _deps/lua-src/src/lfunc.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lfunc.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lfunc.c.s
+.PHONY : _deps/lua-src/src/lfunc.c.s
+
+_deps/lua-src/src/lgc.o: _deps/lua-src/src/lgc.c.o
+.PHONY : _deps/lua-src/src/lgc.o
+
+# target to build an object file
+_deps/lua-src/src/lgc.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lgc.c.o
+.PHONY : _deps/lua-src/src/lgc.c.o
+
+_deps/lua-src/src/lgc.i: _deps/lua-src/src/lgc.c.i
+.PHONY : _deps/lua-src/src/lgc.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lgc.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lgc.c.i
+.PHONY : _deps/lua-src/src/lgc.c.i
+
+_deps/lua-src/src/lgc.s: _deps/lua-src/src/lgc.c.s
+.PHONY : _deps/lua-src/src/lgc.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lgc.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lgc.c.s
+.PHONY : _deps/lua-src/src/lgc.c.s
+
+_deps/lua-src/src/linit.o: _deps/lua-src/src/linit.c.o
+.PHONY : _deps/lua-src/src/linit.o
+
+# target to build an object file
+_deps/lua-src/src/linit.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/linit.c.o
+.PHONY : _deps/lua-src/src/linit.c.o
+
+_deps/lua-src/src/linit.i: _deps/lua-src/src/linit.c.i
+.PHONY : _deps/lua-src/src/linit.i
+
+# target to preprocess a source file
+_deps/lua-src/src/linit.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/linit.c.i
+.PHONY : _deps/lua-src/src/linit.c.i
+
+_deps/lua-src/src/linit.s: _deps/lua-src/src/linit.c.s
+.PHONY : _deps/lua-src/src/linit.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/linit.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/linit.c.s
+.PHONY : _deps/lua-src/src/linit.c.s
+
+_deps/lua-src/src/liolib.o: _deps/lua-src/src/liolib.c.o
+.PHONY : _deps/lua-src/src/liolib.o
+
+# target to build an object file
+_deps/lua-src/src/liolib.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/liolib.c.o
+.PHONY : _deps/lua-src/src/liolib.c.o
+
+_deps/lua-src/src/liolib.i: _deps/lua-src/src/liolib.c.i
+.PHONY : _deps/lua-src/src/liolib.i
+
+# target to preprocess a source file
+_deps/lua-src/src/liolib.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/liolib.c.i
+.PHONY : _deps/lua-src/src/liolib.c.i
+
+_deps/lua-src/src/liolib.s: _deps/lua-src/src/liolib.c.s
+.PHONY : _deps/lua-src/src/liolib.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/liolib.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/liolib.c.s
+.PHONY : _deps/lua-src/src/liolib.c.s
+
+_deps/lua-src/src/llex.o: _deps/lua-src/src/llex.c.o
+.PHONY : _deps/lua-src/src/llex.o
+
+# target to build an object file
+_deps/lua-src/src/llex.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/llex.c.o
+.PHONY : _deps/lua-src/src/llex.c.o
+
+_deps/lua-src/src/llex.i: _deps/lua-src/src/llex.c.i
+.PHONY : _deps/lua-src/src/llex.i
+
+# target to preprocess a source file
+_deps/lua-src/src/llex.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/llex.c.i
+.PHONY : _deps/lua-src/src/llex.c.i
+
+_deps/lua-src/src/llex.s: _deps/lua-src/src/llex.c.s
+.PHONY : _deps/lua-src/src/llex.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/llex.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/llex.c.s
+.PHONY : _deps/lua-src/src/llex.c.s
+
+_deps/lua-src/src/lmathlib.o: _deps/lua-src/src/lmathlib.c.o
+.PHONY : _deps/lua-src/src/lmathlib.o
+
+# target to build an object file
+_deps/lua-src/src/lmathlib.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lmathlib.c.o
+.PHONY : _deps/lua-src/src/lmathlib.c.o
+
+_deps/lua-src/src/lmathlib.i: _deps/lua-src/src/lmathlib.c.i
+.PHONY : _deps/lua-src/src/lmathlib.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lmathlib.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lmathlib.c.i
+.PHONY : _deps/lua-src/src/lmathlib.c.i
+
+_deps/lua-src/src/lmathlib.s: _deps/lua-src/src/lmathlib.c.s
+.PHONY : _deps/lua-src/src/lmathlib.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lmathlib.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lmathlib.c.s
+.PHONY : _deps/lua-src/src/lmathlib.c.s
+
+_deps/lua-src/src/lmem.o: _deps/lua-src/src/lmem.c.o
+.PHONY : _deps/lua-src/src/lmem.o
+
+# target to build an object file
+_deps/lua-src/src/lmem.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lmem.c.o
+.PHONY : _deps/lua-src/src/lmem.c.o
+
+_deps/lua-src/src/lmem.i: _deps/lua-src/src/lmem.c.i
+.PHONY : _deps/lua-src/src/lmem.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lmem.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lmem.c.i
+.PHONY : _deps/lua-src/src/lmem.c.i
+
+_deps/lua-src/src/lmem.s: _deps/lua-src/src/lmem.c.s
+.PHONY : _deps/lua-src/src/lmem.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lmem.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lmem.c.s
+.PHONY : _deps/lua-src/src/lmem.c.s
+
+_deps/lua-src/src/loadlib.o: _deps/lua-src/src/loadlib.c.o
+.PHONY : _deps/lua-src/src/loadlib.o
+
+# target to build an object file
+_deps/lua-src/src/loadlib.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/loadlib.c.o
+.PHONY : _deps/lua-src/src/loadlib.c.o
+
+_deps/lua-src/src/loadlib.i: _deps/lua-src/src/loadlib.c.i
+.PHONY : _deps/lua-src/src/loadlib.i
+
+# target to preprocess a source file
+_deps/lua-src/src/loadlib.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/loadlib.c.i
+.PHONY : _deps/lua-src/src/loadlib.c.i
+
+_deps/lua-src/src/loadlib.s: _deps/lua-src/src/loadlib.c.s
+.PHONY : _deps/lua-src/src/loadlib.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/loadlib.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/loadlib.c.s
+.PHONY : _deps/lua-src/src/loadlib.c.s
+
+_deps/lua-src/src/lobject.o: _deps/lua-src/src/lobject.c.o
+.PHONY : _deps/lua-src/src/lobject.o
+
+# target to build an object file
+_deps/lua-src/src/lobject.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lobject.c.o
+.PHONY : _deps/lua-src/src/lobject.c.o
+
+_deps/lua-src/src/lobject.i: _deps/lua-src/src/lobject.c.i
+.PHONY : _deps/lua-src/src/lobject.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lobject.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lobject.c.i
+.PHONY : _deps/lua-src/src/lobject.c.i
+
+_deps/lua-src/src/lobject.s: _deps/lua-src/src/lobject.c.s
+.PHONY : _deps/lua-src/src/lobject.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lobject.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lobject.c.s
+.PHONY : _deps/lua-src/src/lobject.c.s
+
+_deps/lua-src/src/lopcodes.o: _deps/lua-src/src/lopcodes.c.o
+.PHONY : _deps/lua-src/src/lopcodes.o
+
+# target to build an object file
+_deps/lua-src/src/lopcodes.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lopcodes.c.o
+.PHONY : _deps/lua-src/src/lopcodes.c.o
+
+_deps/lua-src/src/lopcodes.i: _deps/lua-src/src/lopcodes.c.i
+.PHONY : _deps/lua-src/src/lopcodes.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lopcodes.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lopcodes.c.i
+.PHONY : _deps/lua-src/src/lopcodes.c.i
+
+_deps/lua-src/src/lopcodes.s: _deps/lua-src/src/lopcodes.c.s
+.PHONY : _deps/lua-src/src/lopcodes.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lopcodes.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lopcodes.c.s
+.PHONY : _deps/lua-src/src/lopcodes.c.s
+
+_deps/lua-src/src/loslib.o: _deps/lua-src/src/loslib.c.o
+.PHONY : _deps/lua-src/src/loslib.o
+
+# target to build an object file
+_deps/lua-src/src/loslib.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/loslib.c.o
+.PHONY : _deps/lua-src/src/loslib.c.o
+
+_deps/lua-src/src/loslib.i: _deps/lua-src/src/loslib.c.i
+.PHONY : _deps/lua-src/src/loslib.i
+
+# target to preprocess a source file
+_deps/lua-src/src/loslib.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/loslib.c.i
+.PHONY : _deps/lua-src/src/loslib.c.i
+
+_deps/lua-src/src/loslib.s: _deps/lua-src/src/loslib.c.s
+.PHONY : _deps/lua-src/src/loslib.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/loslib.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/loslib.c.s
+.PHONY : _deps/lua-src/src/loslib.c.s
+
+_deps/lua-src/src/lparser.o: _deps/lua-src/src/lparser.c.o
+.PHONY : _deps/lua-src/src/lparser.o
+
+# target to build an object file
+_deps/lua-src/src/lparser.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lparser.c.o
+.PHONY : _deps/lua-src/src/lparser.c.o
+
+_deps/lua-src/src/lparser.i: _deps/lua-src/src/lparser.c.i
+.PHONY : _deps/lua-src/src/lparser.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lparser.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lparser.c.i
+.PHONY : _deps/lua-src/src/lparser.c.i
+
+_deps/lua-src/src/lparser.s: _deps/lua-src/src/lparser.c.s
+.PHONY : _deps/lua-src/src/lparser.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lparser.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lparser.c.s
+.PHONY : _deps/lua-src/src/lparser.c.s
+
+_deps/lua-src/src/lstate.o: _deps/lua-src/src/lstate.c.o
+.PHONY : _deps/lua-src/src/lstate.o
+
+# target to build an object file
+_deps/lua-src/src/lstate.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lstate.c.o
+.PHONY : _deps/lua-src/src/lstate.c.o
+
+_deps/lua-src/src/lstate.i: _deps/lua-src/src/lstate.c.i
+.PHONY : _deps/lua-src/src/lstate.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lstate.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lstate.c.i
+.PHONY : _deps/lua-src/src/lstate.c.i
+
+_deps/lua-src/src/lstate.s: _deps/lua-src/src/lstate.c.s
+.PHONY : _deps/lua-src/src/lstate.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lstate.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lstate.c.s
+.PHONY : _deps/lua-src/src/lstate.c.s
+
+_deps/lua-src/src/lstring.o: _deps/lua-src/src/lstring.c.o
+.PHONY : _deps/lua-src/src/lstring.o
+
+# target to build an object file
+_deps/lua-src/src/lstring.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lstring.c.o
+.PHONY : _deps/lua-src/src/lstring.c.o
+
+_deps/lua-src/src/lstring.i: _deps/lua-src/src/lstring.c.i
+.PHONY : _deps/lua-src/src/lstring.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lstring.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lstring.c.i
+.PHONY : _deps/lua-src/src/lstring.c.i
+
+_deps/lua-src/src/lstring.s: _deps/lua-src/src/lstring.c.s
+.PHONY : _deps/lua-src/src/lstring.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lstring.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lstring.c.s
+.PHONY : _deps/lua-src/src/lstring.c.s
+
+_deps/lua-src/src/lstrlib.o: _deps/lua-src/src/lstrlib.c.o
+.PHONY : _deps/lua-src/src/lstrlib.o
+
+# target to build an object file
+_deps/lua-src/src/lstrlib.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lstrlib.c.o
+.PHONY : _deps/lua-src/src/lstrlib.c.o
+
+_deps/lua-src/src/lstrlib.i: _deps/lua-src/src/lstrlib.c.i
+.PHONY : _deps/lua-src/src/lstrlib.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lstrlib.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lstrlib.c.i
+.PHONY : _deps/lua-src/src/lstrlib.c.i
+
+_deps/lua-src/src/lstrlib.s: _deps/lua-src/src/lstrlib.c.s
+.PHONY : _deps/lua-src/src/lstrlib.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lstrlib.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lstrlib.c.s
+.PHONY : _deps/lua-src/src/lstrlib.c.s
+
+_deps/lua-src/src/ltable.o: _deps/lua-src/src/ltable.c.o
+.PHONY : _deps/lua-src/src/ltable.o
+
+# target to build an object file
+_deps/lua-src/src/ltable.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ltable.c.o
+.PHONY : _deps/lua-src/src/ltable.c.o
+
+_deps/lua-src/src/ltable.i: _deps/lua-src/src/ltable.c.i
+.PHONY : _deps/lua-src/src/ltable.i
+
+# target to preprocess a source file
+_deps/lua-src/src/ltable.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ltable.c.i
+.PHONY : _deps/lua-src/src/ltable.c.i
+
+_deps/lua-src/src/ltable.s: _deps/lua-src/src/ltable.c.s
+.PHONY : _deps/lua-src/src/ltable.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/ltable.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ltable.c.s
+.PHONY : _deps/lua-src/src/ltable.c.s
+
+_deps/lua-src/src/ltablib.o: _deps/lua-src/src/ltablib.c.o
+.PHONY : _deps/lua-src/src/ltablib.o
+
+# target to build an object file
+_deps/lua-src/src/ltablib.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ltablib.c.o
+.PHONY : _deps/lua-src/src/ltablib.c.o
+
+_deps/lua-src/src/ltablib.i: _deps/lua-src/src/ltablib.c.i
+.PHONY : _deps/lua-src/src/ltablib.i
+
+# target to preprocess a source file
+_deps/lua-src/src/ltablib.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ltablib.c.i
+.PHONY : _deps/lua-src/src/ltablib.c.i
+
+_deps/lua-src/src/ltablib.s: _deps/lua-src/src/ltablib.c.s
+.PHONY : _deps/lua-src/src/ltablib.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/ltablib.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ltablib.c.s
+.PHONY : _deps/lua-src/src/ltablib.c.s
+
+_deps/lua-src/src/ltm.o: _deps/lua-src/src/ltm.c.o
+.PHONY : _deps/lua-src/src/ltm.o
+
+# target to build an object file
+_deps/lua-src/src/ltm.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ltm.c.o
+.PHONY : _deps/lua-src/src/ltm.c.o
+
+_deps/lua-src/src/ltm.i: _deps/lua-src/src/ltm.c.i
+.PHONY : _deps/lua-src/src/ltm.i
+
+# target to preprocess a source file
+_deps/lua-src/src/ltm.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ltm.c.i
+.PHONY : _deps/lua-src/src/ltm.c.i
+
+_deps/lua-src/src/ltm.s: _deps/lua-src/src/ltm.c.s
+.PHONY : _deps/lua-src/src/ltm.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/ltm.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/ltm.c.s
+.PHONY : _deps/lua-src/src/ltm.c.s
+
+_deps/lua-src/src/lundump.o: _deps/lua-src/src/lundump.c.o
+.PHONY : _deps/lua-src/src/lundump.o
+
+# target to build an object file
+_deps/lua-src/src/lundump.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lundump.c.o
+.PHONY : _deps/lua-src/src/lundump.c.o
+
+_deps/lua-src/src/lundump.i: _deps/lua-src/src/lundump.c.i
+.PHONY : _deps/lua-src/src/lundump.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lundump.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lundump.c.i
+.PHONY : _deps/lua-src/src/lundump.c.i
+
+_deps/lua-src/src/lundump.s: _deps/lua-src/src/lundump.c.s
+.PHONY : _deps/lua-src/src/lundump.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lundump.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lundump.c.s
+.PHONY : _deps/lua-src/src/lundump.c.s
+
+_deps/lua-src/src/lutf8lib.o: _deps/lua-src/src/lutf8lib.c.o
+.PHONY : _deps/lua-src/src/lutf8lib.o
+
+# target to build an object file
+_deps/lua-src/src/lutf8lib.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lutf8lib.c.o
+.PHONY : _deps/lua-src/src/lutf8lib.c.o
+
+_deps/lua-src/src/lutf8lib.i: _deps/lua-src/src/lutf8lib.c.i
+.PHONY : _deps/lua-src/src/lutf8lib.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lutf8lib.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lutf8lib.c.i
+.PHONY : _deps/lua-src/src/lutf8lib.c.i
+
+_deps/lua-src/src/lutf8lib.s: _deps/lua-src/src/lutf8lib.c.s
+.PHONY : _deps/lua-src/src/lutf8lib.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lutf8lib.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lutf8lib.c.s
+.PHONY : _deps/lua-src/src/lutf8lib.c.s
+
+_deps/lua-src/src/lvm.o: _deps/lua-src/src/lvm.c.o
+.PHONY : _deps/lua-src/src/lvm.o
+
+# target to build an object file
+_deps/lua-src/src/lvm.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lvm.c.o
+.PHONY : _deps/lua-src/src/lvm.c.o
+
+_deps/lua-src/src/lvm.i: _deps/lua-src/src/lvm.c.i
+.PHONY : _deps/lua-src/src/lvm.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lvm.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lvm.c.i
+.PHONY : _deps/lua-src/src/lvm.c.i
+
+_deps/lua-src/src/lvm.s: _deps/lua-src/src/lvm.c.s
+.PHONY : _deps/lua-src/src/lvm.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lvm.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lvm.c.s
+.PHONY : _deps/lua-src/src/lvm.c.s
+
+_deps/lua-src/src/lzio.o: _deps/lua-src/src/lzio.c.o
+.PHONY : _deps/lua-src/src/lzio.o
+
+# target to build an object file
+_deps/lua-src/src/lzio.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lzio.c.o
+.PHONY : _deps/lua-src/src/lzio.c.o
+
+_deps/lua-src/src/lzio.i: _deps/lua-src/src/lzio.c.i
+.PHONY : _deps/lua-src/src/lzio.i
+
+# target to preprocess a source file
+_deps/lua-src/src/lzio.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lzio.c.i
+.PHONY : _deps/lua-src/src/lzio.c.i
+
+_deps/lua-src/src/lzio.s: _deps/lua-src/src/lzio.c.s
+.PHONY : _deps/lua-src/src/lzio.s
+
+# target to generate assembly for a file
+_deps/lua-src/src/lzio.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lua_static.dir/build.make CMakeFiles/lua_static.dir/_deps/lua-src/src/lzio.c.s
+.PHONY : _deps/lua-src/src/lzio.c.s
 
 extern/imgui/backends/imgui_impl_glfw.o: extern/imgui/backends/imgui_impl_glfw.cpp.o
 .PHONY : extern/imgui/backends/imgui_impl_glfw.o
@@ -417,10 +1587,138 @@ help:
 	@echo "... install/strip"
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
+	@echo "... Continuous"
+	@echo "... ContinuousBuild"
+	@echo "... ContinuousConfigure"
+	@echo "... ContinuousCoverage"
+	@echo "... ContinuousMemCheck"
+	@echo "... ContinuousStart"
+	@echo "... ContinuousSubmit"
+	@echo "... ContinuousTest"
+	@echo "... ContinuousUpdate"
+	@echo "... Experimental"
+	@echo "... ExperimentalBuild"
+	@echo "... ExperimentalConfigure"
+	@echo "... ExperimentalCoverage"
+	@echo "... ExperimentalMemCheck"
+	@echo "... ExperimentalStart"
+	@echo "... ExperimentalSubmit"
+	@echo "... ExperimentalTest"
+	@echo "... ExperimentalUpdate"
+	@echo "... Nightly"
+	@echo "... NightlyBuild"
+	@echo "... NightlyConfigure"
+	@echo "... NightlyCoverage"
+	@echo "... NightlyMemCheck"
+	@echo "... NightlyMemoryCheck"
+	@echo "... NightlyStart"
+	@echo "... NightlySubmit"
+	@echo "... NightlyTest"
+	@echo "... NightlyUpdate"
 	@echo "... uninstall"
 	@echo "... update_mappings"
 	@echo "... glfw"
+	@echo "... lua_static"
 	@echo "... solitaire"
+	@echo "... _deps/lua-src/src/lapi.o"
+	@echo "... _deps/lua-src/src/lapi.i"
+	@echo "... _deps/lua-src/src/lapi.s"
+	@echo "... _deps/lua-src/src/lauxlib.o"
+	@echo "... _deps/lua-src/src/lauxlib.i"
+	@echo "... _deps/lua-src/src/lauxlib.s"
+	@echo "... _deps/lua-src/src/lbaselib.o"
+	@echo "... _deps/lua-src/src/lbaselib.i"
+	@echo "... _deps/lua-src/src/lbaselib.s"
+	@echo "... _deps/lua-src/src/lbitlib.o"
+	@echo "... _deps/lua-src/src/lbitlib.i"
+	@echo "... _deps/lua-src/src/lbitlib.s"
+	@echo "... _deps/lua-src/src/lcode.o"
+	@echo "... _deps/lua-src/src/lcode.i"
+	@echo "... _deps/lua-src/src/lcode.s"
+	@echo "... _deps/lua-src/src/lcorolib.o"
+	@echo "... _deps/lua-src/src/lcorolib.i"
+	@echo "... _deps/lua-src/src/lcorolib.s"
+	@echo "... _deps/lua-src/src/lctype.o"
+	@echo "... _deps/lua-src/src/lctype.i"
+	@echo "... _deps/lua-src/src/lctype.s"
+	@echo "... _deps/lua-src/src/ldblib.o"
+	@echo "... _deps/lua-src/src/ldblib.i"
+	@echo "... _deps/lua-src/src/ldblib.s"
+	@echo "... _deps/lua-src/src/ldebug.o"
+	@echo "... _deps/lua-src/src/ldebug.i"
+	@echo "... _deps/lua-src/src/ldebug.s"
+	@echo "... _deps/lua-src/src/ldo.o"
+	@echo "... _deps/lua-src/src/ldo.i"
+	@echo "... _deps/lua-src/src/ldo.s"
+	@echo "... _deps/lua-src/src/ldump.o"
+	@echo "... _deps/lua-src/src/ldump.i"
+	@echo "... _deps/lua-src/src/ldump.s"
+	@echo "... _deps/lua-src/src/lfunc.o"
+	@echo "... _deps/lua-src/src/lfunc.i"
+	@echo "... _deps/lua-src/src/lfunc.s"
+	@echo "... _deps/lua-src/src/lgc.o"
+	@echo "... _deps/lua-src/src/lgc.i"
+	@echo "... _deps/lua-src/src/lgc.s"
+	@echo "... _deps/lua-src/src/linit.o"
+	@echo "... _deps/lua-src/src/linit.i"
+	@echo "... _deps/lua-src/src/linit.s"
+	@echo "... _deps/lua-src/src/liolib.o"
+	@echo "... _deps/lua-src/src/liolib.i"
+	@echo "... _deps/lua-src/src/liolib.s"
+	@echo "... _deps/lua-src/src/llex.o"
+	@echo "... _deps/lua-src/src/llex.i"
+	@echo "... _deps/lua-src/src/llex.s"
+	@echo "... _deps/lua-src/src/lmathlib.o"
+	@echo "... _deps/lua-src/src/lmathlib.i"
+	@echo "... _deps/lua-src/src/lmathlib.s"
+	@echo "... _deps/lua-src/src/lmem.o"
+	@echo "... _deps/lua-src/src/lmem.i"
+	@echo "... _deps/lua-src/src/lmem.s"
+	@echo "... _deps/lua-src/src/loadlib.o"
+	@echo "... _deps/lua-src/src/loadlib.i"
+	@echo "... _deps/lua-src/src/loadlib.s"
+	@echo "... _deps/lua-src/src/lobject.o"
+	@echo "... _deps/lua-src/src/lobject.i"
+	@echo "... _deps/lua-src/src/lobject.s"
+	@echo "... _deps/lua-src/src/lopcodes.o"
+	@echo "... _deps/lua-src/src/lopcodes.i"
+	@echo "... _deps/lua-src/src/lopcodes.s"
+	@echo "... _deps/lua-src/src/loslib.o"
+	@echo "... _deps/lua-src/src/loslib.i"
+	@echo "... _deps/lua-src/src/loslib.s"
+	@echo "... _deps/lua-src/src/lparser.o"
+	@echo "... _deps/lua-src/src/lparser.i"
+	@echo "... _deps/lua-src/src/lparser.s"
+	@echo "... _deps/lua-src/src/lstate.o"
+	@echo "... _deps/lua-src/src/lstate.i"
+	@echo "... _deps/lua-src/src/lstate.s"
+	@echo "... _deps/lua-src/src/lstring.o"
+	@echo "... _deps/lua-src/src/lstring.i"
+	@echo "... _deps/lua-src/src/lstring.s"
+	@echo "... _deps/lua-src/src/lstrlib.o"
+	@echo "... _deps/lua-src/src/lstrlib.i"
+	@echo "... _deps/lua-src/src/lstrlib.s"
+	@echo "... _deps/lua-src/src/ltable.o"
+	@echo "... _deps/lua-src/src/ltable.i"
+	@echo "... _deps/lua-src/src/ltable.s"
+	@echo "... _deps/lua-src/src/ltablib.o"
+	@echo "... _deps/lua-src/src/ltablib.i"
+	@echo "... _deps/lua-src/src/ltablib.s"
+	@echo "... _deps/lua-src/src/ltm.o"
+	@echo "... _deps/lua-src/src/ltm.i"
+	@echo "... _deps/lua-src/src/ltm.s"
+	@echo "... _deps/lua-src/src/lundump.o"
+	@echo "... _deps/lua-src/src/lundump.i"
+	@echo "... _deps/lua-src/src/lundump.s"
+	@echo "... _deps/lua-src/src/lutf8lib.o"
+	@echo "... _deps/lua-src/src/lutf8lib.i"
+	@echo "... _deps/lua-src/src/lutf8lib.s"
+	@echo "... _deps/lua-src/src/lvm.o"
+	@echo "... _deps/lua-src/src/lvm.i"
+	@echo "... _deps/lua-src/src/lvm.s"
+	@echo "... _deps/lua-src/src/lzio.o"
+	@echo "... _deps/lua-src/src/lzio.i"
+	@echo "... _deps/lua-src/src/lzio.s"
 	@echo "... extern/imgui/backends/imgui_impl_glfw.o"
 	@echo "... extern/imgui/backends/imgui_impl_glfw.i"
 	@echo "... extern/imgui/backends/imgui_impl_glfw.s"
@@ -456,6 +1754,7 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
+	$(CMAKE_COMMAND) -P /home/ben/code/sol/build/CMakeFiles/VerifyGlobs.cmake
 	$(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

@@ -44,6 +44,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
+  include("/home/ben/code/sol/build/_deps/sol2-build/cmake_install.cmake")
   include("/home/ben/code/sol/build/extern/glfw/cmake_install.cmake")
 
 endif()

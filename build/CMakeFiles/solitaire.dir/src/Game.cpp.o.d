@@ -121,52 +121,41 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
  /home/ben/code/sol/extern/imgui/imgui.h \
  /home/ben/code/sol/extern/imgui/imconfig.h \
  /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h /usr/include/string.h \
- /usr/include/strings.h /usr/include/assert.h /usr/include/c++/15/random \
- /usr/include/c++/15/cmath /usr/include/math.h \
- /usr/include/x86_64-linux-gnu/bits/math-vector.h \
- /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h \
- /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h \
- /usr/include/x86_64-linux-gnu/bits/fp-logb.h \
- /usr/include/x86_64-linux-gnu/bits/fp-fast.h \
- /usr/include/x86_64-linux-gnu/bits/mathcalls-macros.h \
- /usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h \
- /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
- /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h \
- /usr/include/x86_64-linux-gnu/bits/iscanonical.h \
- /usr/include/c++/15/bits/specfun.h /usr/include/c++/15/limits \
- /usr/include/c++/15/tr1/gamma.tcc \
- /usr/include/c++/15/tr1/special_function_util.h \
- /usr/include/c++/15/tr1/bessel_function.tcc \
- /usr/include/c++/15/tr1/beta_function.tcc \
- /usr/include/c++/15/tr1/ell_integral.tcc \
- /usr/include/c++/15/tr1/exp_integral.tcc \
- /usr/include/c++/15/tr1/hypergeometric.tcc \
- /usr/include/c++/15/tr1/legendre_function.tcc \
- /usr/include/c++/15/tr1/modified_bessel_func.tcc \
- /usr/include/c++/15/tr1/poly_hermite.tcc \
- /usr/include/c++/15/tr1/poly_laguerre.tcc \
- /usr/include/c++/15/tr1/riemann_zeta.tcc /usr/include/c++/15/cstdint \
+ /usr/include/strings.h /usr/include/assert.h \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/sol.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/version.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/config.hpp \
  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h /usr/include/stdint.h \
  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
  /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
- /usr/include/c++/15/bits/random.h \
- /usr/include/c++/15/bits/uniform_int_dist.h \
- /usr/include/x86_64-linux-gnu/c++/15/bits/opt_random.h \
- /usr/include/c++/15/bits/random.tcc /usr/include/c++/15/numeric \
- /usr/include/c++/15/bits/stl_numeric.h \
- /usr/include/c++/15/pstl/glue_numeric_defs.h \
- /usr/include/c++/15/pstl/execution_defs.h /usr/include/c++/15/algorithm \
- /usr/include/c++/15/bits/stl_algo.h \
- /usr/include/c++/15/bits/algorithmfwd.h \
- /usr/include/c++/15/bits/stl_heap.h \
- /usr/include/c++/15/bits/stl_tempbuf.h \
- /usr/include/c++/15/pstl/glue_algorithm_defs.h \
- /usr/include/c++/15/iostream /usr/include/c++/15/ostream \
- /usr/include/c++/15/bits/ostream.h /usr/include/c++/15/ios \
- /usr/include/c++/15/exception /usr/include/c++/15/bits/exception_ptr.h \
- /usr/include/c++/15/bits/cxxabi_init_exception.h \
- /usr/include/c++/15/typeinfo /usr/include/c++/15/bits/nested_exception.h \
- /usr/include/c++/15/bits/ios_base.h /usr/include/c++/15/ext/atomicity.h \
+ /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+ /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
+ /usr/include/limits.h /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
+ /usr/include/x86_64-linux-gnu/bits/local_lim.h \
+ /usr/include/linux/limits.h \
+ /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h \
+ /usr/include/x86_64-linux-gnu/bits/posix2_lim.h \
+ /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
+ /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/prologue.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/epilogue.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/detail/build_version.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/forward.hpp \
+ /usr/include/c++/15/utility /usr/include/c++/15/bits/stl_relops.h \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/forward_detail.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/traits.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/tuple.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/base_traits.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/bind_traits.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/pointer_like.hpp \
+ /usr/include/c++/15/memory /usr/include/c++/15/bits/stl_tempbuf.h \
+ /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+ /usr/include/c++/15/bits/align.h /usr/include/c++/15/bits/unique_ptr.h \
+ /usr/include/c++/15/bits/shared_ptr.h \
+ /usr/include/c++/15/bits/shared_ptr_base.h /usr/include/c++/15/typeinfo \
+ /usr/include/c++/15/bits/allocated_ptr.h \
+ /usr/include/c++/15/ext/aligned_buffer.h \
+ /usr/include/c++/15/ext/atomicity.h \
  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
  /usr/include/pthread.h /usr/include/sched.h \
@@ -187,22 +176,204 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
  /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h \
  /usr/include/x86_64-linux-gnu/bits/setjmp.h \
  /usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h \
- /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h \
  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
  /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
+ /usr/include/c++/15/ext/concurrence.h /usr/include/c++/15/exception \
+ /usr/include/c++/15/bits/exception_ptr.h \
+ /usr/include/c++/15/bits/cxxabi_init_exception.h \
+ /usr/include/c++/15/bits/nested_exception.h \
+ /usr/include/c++/15/bits/shared_ptr_atomic.h \
+ /usr/include/c++/15/bits/atomic_base.h \
+ /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+ /usr/include/c++/15/backward/auto_ptr.h \
+ /usr/include/c++/15/pstl/glue_memory_defs.h \
+ /usr/include/c++/15/pstl/execution_defs.h \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/string_view.hpp \
+ /usr/include/c++/15/functional /usr/include/c++/15/bits/std_function.h \
+ /usr/include/c++/15/unordered_map \
+ /usr/include/c++/15/bits/unordered_map.h \
+ /usr/include/c++/15/bits/hashtable.h \
+ /usr/include/c++/15/bits/hashtable_policy.h \
+ /usr/include/c++/15/bits/enable_special_members.h \
+ /usr/include/c++/15/bits/node_handle.h \
+ /usr/include/c++/15/bits/erase_if.h /usr/include/c++/15/array \
+ /usr/include/c++/15/compare /usr/include/c++/15/cstdint \
+ /usr/include/c++/15/iterator /usr/include/c++/15/bits/stream_iterator.h \
+ /usr/include/c++/15/bits/streambuf_iterator.h \
+ /usr/include/c++/15/streambuf /usr/include/c++/15/bits/ios_base.h \
  /usr/include/c++/15/bits/locale_classes.h \
  /usr/include/c++/15/bits/locale_classes.tcc \
  /usr/include/c++/15/system_error \
  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
- /usr/include/c++/15/stdexcept /usr/include/c++/15/streambuf \
- /usr/include/c++/15/bits/streambuf.tcc \
+ /usr/include/c++/15/stdexcept /usr/include/c++/15/bits/streambuf.tcc \
+ /usr/include/c++/15/variant /usr/include/c++/15/bits/monostate.h \
+ /usr/include/c++/15/bits/parse_numbers.h \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/assert.hpp \
+ /usr/include/c++/15/iostream /usr/include/c++/15/ostream \
+ /usr/include/c++/15/bits/ostream.h /usr/include/c++/15/ios \
  /usr/include/c++/15/bits/basic_ios.h \
  /usr/include/c++/15/bits/locale_facets.h /usr/include/c++/15/cwctype \
  /usr/include/wctype.h /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
- /usr/include/c++/15/bits/streambuf_iterator.h \
  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
  /usr/include/c++/15/bits/locale_facets.tcc \
  /usr/include/c++/15/bits/basic_ios.tcc \
  /usr/include/c++/15/bits/ostream.tcc /usr/include/c++/15/istream \
- /usr/include/c++/15/bits/istream.tcc
+ /usr/include/c++/15/bits/istream.tcc \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/bytecode.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/compatibility.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/compatibility/lua_version.hpp \
+ /home/ben/code/sol/build/_deps/lua-src/src/lua.hpp \
+ /home/ben/code/sol/build/_deps/lua-src/src/lua.h \
+ /home/ben/code/sol/build/_deps/lua-src/src/luaconf.h \
+ /home/ben/code/sol/build/_deps/lua-src/src/lualib.h \
+ /home/ben/code/sol/build/_deps/lua-src/src/lauxlib.h \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/compatibility/compat-5.3.h \
+ /home/ben/code/sol/build/_deps/lua-src/src/lua.h \
+ /home/ben/code/sol/build/_deps/lua-src/src/lauxlib.h \
+ /home/ben/code/sol/build/_deps/lua-src/src/lualib.h \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/compatibility/compat-5.3.c.h \
+ /usr/include/c++/15/stdlib.h \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/compatibility/compat-5.4.h \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/trampoline.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/types.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/error.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/optional.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/in_place.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/optional_implementation.hpp \
+ /usr/include/c++/15/optional \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/raii.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/policies.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/ebco.hpp \
+ /usr/include/c++/15/cstring \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_core.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/inheritance.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/usertype_traits.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/demangle.hpp \
+ /usr/include/c++/15/locale \
+ /usr/include/c++/15/bits/locale_facets_nonio.h /usr/include/c++/15/ctime \
+ /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
+ /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+ /usr/include/libintl.h /usr/include/c++/15/bits/codecvt.h \
+ /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+ /usr/include/c++/15/bits/locale_conv.h \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/unique_usertype_traits.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/error_handler.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/reference.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_reference.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/tie.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_guard.hpp \
+ /usr/include/c++/15/bitset /usr/include/c++/15/forward_list \
+ /usr/include/c++/15/bits/forward_list.h \
+ /usr/include/c++/15/bits/forward_list.tcc /usr/include/c++/15/limits \
+ /usr/include/c++/15/algorithm /usr/include/c++/15/bits/stl_algo.h \
+ /usr/include/c++/15/bits/algorithmfwd.h \
+ /usr/include/c++/15/bits/stl_heap.h \
+ /usr/include/c++/15/bits/uniform_int_dist.h \
+ /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+ /usr/include/c++/15/sstream /usr/include/c++/15/bits/sstream.tcc \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_check.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_check_unqualified.hpp \
+ /usr/include/c++/15/cmath /usr/include/math.h \
+ /usr/include/x86_64-linux-gnu/bits/math-vector.h \
+ /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h \
+ /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h \
+ /usr/include/x86_64-linux-gnu/bits/fp-logb.h \
+ /usr/include/x86_64-linux-gnu/bits/fp-fast.h \
+ /usr/include/x86_64-linux-gnu/bits/mathcalls-macros.h \
+ /usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h \
+ /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
+ /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h \
+ /usr/include/x86_64-linux-gnu/bits/iscanonical.h \
+ /usr/include/c++/15/bits/specfun.h /usr/include/c++/15/tr1/gamma.tcc \
+ /usr/include/c++/15/tr1/special_function_util.h \
+ /usr/include/c++/15/tr1/bessel_function.tcc \
+ /usr/include/c++/15/tr1/beta_function.tcc \
+ /usr/include/c++/15/tr1/ell_integral.tcc \
+ /usr/include/c++/15/tr1/exp_integral.tcc \
+ /usr/include/c++/15/tr1/hypergeometric.tcc \
+ /usr/include/c++/15/tr1/legendre_function.tcc \
+ /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+ /usr/include/c++/15/tr1/poly_hermite.tcc \
+ /usr/include/c++/15/tr1/poly_laguerre.tcc \
+ /usr/include/c++/15/tr1/riemann_zeta.tcc \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_check_qualified.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_get.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_get_unqualified.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/overload.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/unicode.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_get_qualified.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_check_get.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_check_get_unqualified.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_check_get_qualified.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_push.hpp \
+ /usr/include/c++/15/cassert \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/debug.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_pop.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_field.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_probe.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/object.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/make_reference.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/object_base.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/function.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/unsafe_function.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/function_result.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/protected_function_result.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/proxy_base.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_iterator.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_proxy.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack_proxy_base.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/unsafe_function_result.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/function_types.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/function_types_core.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/wrapper.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/function_types_templated.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/call.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/property.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/protect.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/function_types_stateless.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/function_types_stateful.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/function_types_overloaded.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/resolve.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/dump_handler.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/protected_function.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/protected_handler.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/usertype.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/usertype_core.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/deprecate.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/usertype_container_launch.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/usertype_container.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/usertype_storage.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/usertype_proxy.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/metatable.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/table_core.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/table_proxy.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/table_iterator.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/pairs_iterator.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/stack/detail/pairs.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/table.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/lua_table.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/state.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/state_view.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/environment.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/load_result.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/state_handling.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/lua_value.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/thread.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/coroutine.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/userdata.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/as_args.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/variadic_args.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/variadic_results.hpp \
+ /home/ben/code/sol/build/_deps/sol2-src/include/sol/as_returns.hpp \
+ /usr/include/c++/15/random /usr/include/c++/15/bits/random.h \
+ /usr/include/x86_64-linux-gnu/c++/15/bits/opt_random.h \
+ /usr/include/c++/15/bits/random.tcc /usr/include/c++/15/numeric \
+ /usr/include/c++/15/bits/stl_numeric.h \
+ /usr/include/c++/15/pstl/glue_numeric_defs.h \
+ /usr/include/c++/15/filesystem /usr/include/c++/15/bits/fs_fwd.h \
+ /usr/include/c++/15/bits/chrono.h /usr/include/c++/15/ratio \
+ /usr/include/c++/15/bits/fs_path.h /usr/include/c++/15/iomanip \
+ /usr/include/c++/15/bits/quoted_string.h /usr/include/c++/15/codecvt \
+ /usr/include/c++/15/bits/fs_dir.h /usr/include/c++/15/bits/fs_ops.h
