@@ -443,9 +443,31 @@ void Game::UpdateAndDraw() {
             if (p.type == PileType::Foundation) foundationCount += p.cards.size();
         }
         if (foundationCount == 52) {
-            m_isWon = true;
-            m_winAnimTimer = 0.0f;
-            m_bouncingCards.clear();
+            bool animating = false;
+            for (size_t i = 0; i < m_piles.size(); ++i) {
+                const Pile& p = m_piles[i];
+                ImVec2 basePos = ImVec2(winPos.x + p.pos.x * scale, winPos.y + p.pos.y * scale);
+                ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
+                for (size_t c = 0; c < p.cards.size(); ++c) {
+                    int drawIndex = (int)c;
+                    if (p.type == PileType::Waste && p.cards.size() > 3) {
+                        drawIndex = std::max(0, (int)c - (int)(p.cards.size() - 3));
+                    }
+                    ImVec2 targetPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
+                    float dx = p.cards[c].animPos.x - targetPos.x;
+                    float dy = p.cards[c].animPos.y - targetPos.y;
+                    if (dx * dx + dy * dy > 4.0f) {
+                        animating = true;
+                        break;
+                    }
+                }
+                if (animating) break;
+            }
+            if (!animating) {
+                m_isWon = true;
+                m_winAnimTimer = 0.0f;
+                m_bouncingCards.clear();
+            }
         }
     }
 
