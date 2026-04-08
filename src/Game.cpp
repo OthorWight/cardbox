@@ -407,6 +407,7 @@ void Game::UpdateAndDraw() {
     ImDrawList* drawList = ImGui::GetWindowDrawList();
     ImVec2 mousePos = ImGui::GetMousePos();
     bool mouseClicked = ImGui::IsMouseClicked(0);
+    bool doubleClicked = ImGui::IsMouseDoubleClicked(0);
     bool mouseReleased = ImGui::IsMouseReleased(0);
 
     // Calculate scale based on window width (1280 is our reference width)
@@ -436,13 +437,7 @@ void Game::UpdateAndDraw() {
     int hoveredPile = -1;
     int hoveredCard = -1;
 
-    // Draw piles and handle hover logic
-    // Draw in correct order, from bottom to top
-    float dt = ImGui::GetIO().DeltaTime;
-    float animSpeed = 15.0f * dt;
-    if (animSpeed > 1.0f) animSpeed = 1.0f;
-    float flipSpeed = 10.0f * dt;
-
+    // 1. Calculate Hover Logic BEFORE Drawing
     for (size_t i = 0; i < m_piles.size(); ++i) {
         Pile& p = m_piles[i];
         ImVec2 basePos = ImVec2(winPos.x + p.pos.x * scale, winPos.y + p.pos.y * scale);
@@ -450,94 +445,30 @@ void Game::UpdateAndDraw() {
         ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
 
         if (p.cards.empty()) {
-            DrawEmptyPile(drawList, basePos, pSize, scale);
-            // Check hover for empty pile
             if (mousePos.x >= basePos.x && mousePos.x <= basePos.x + pSize.x &&
                 mousePos.y >= basePos.y && mousePos.y <= basePos.y + pSize.y) {
-                hoveredPile = i;
+                hoveredPile = (int)i;
                 hoveredCard = -1;
             }
         } else {
-            // Draw cards
             for (size_t c = 0; c < p.cards.size(); ++c) {
-                // Skip drawing dragged cards in their original pile
-                if (m_dragSourcePile == (int)i && (int)c >= m_dragCardIndex) continue;
-
-                int drawIndex = c;
+                int drawIndex = (int)c;
                 if (p.type == PileType::Waste && p.cards.size() > 3) {
                     drawIndex = std::max(0, (int)c - (int)(p.cards.size() - 3));
                 }
 
                 ImVec2 cardPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
-                Card& cardRef = p.cards[c];
-
-                if (!cardRef.hasInitializedPos) {
-                    cardRef.animPos = cardPos;
-                    cardRef.hasInitializedPos = true;
-                    cardRef.flipVisual = cardRef.faceUp ? 1.0f : -1.0f;
-                } else {
-                    cardRef.animPos.x += (cardPos.x - cardRef.animPos.x) * animSpeed;
-                    cardRef.animPos.y += (cardPos.y - cardRef.animPos.y) * animSpeed;
-                }
-
-                float targetFlip = cardRef.faceUp ? 1.0f : -1.0f;
-                if (cardRef.flipVisual < targetFlip) {
-                    cardRef.flipVisual += flipSpeed;
-                    if (cardRef.flipVisual > targetFlip) cardRef.flipVisual = targetFlip;
-                } else if (cardRef.flipVisual > targetFlip) {
-                    cardRef.flipVisual -= flipSpeed;
-                    if (cardRef.flipVisual < targetFlip) cardRef.flipVisual = targetFlip;
-                }
-
-                if (cardRef.flipVisual > 0.0f) {
-                    DrawCard(drawList, cardRef.animPos, pSize, cardRef, scale, cardRef.flipVisual);
-                } else {
-                    DrawCardBack(drawList, cardRef.animPos, pSize, scale, -cardRef.flipVisual);
-                }
-
-                // Check hover
-                // For all cards except top, the hover rect is smaller (just the offset) unless it's the last card
-                float hx = (c == p.cards.size() - 1 || (m_dragSourcePile == (int)i && (int)c == m_dragCardIndex - 1)) ? pSize.x : std::max(pOffset.x, pSize.x);
-                float hy = (c == p.cards.size() - 1 || (m_dragSourcePile == (int)i && (int)c == m_dragCardIndex - 1)) ? pSize.y : std::max(pOffset.y, pSize.y);
-                
-                // If it's collapsed (waste), only hover top
-                if (p.type == PileType::Waste && c < p.cards.size() - 1) {
-                    hx = 0; hy = 0;
-                }
-                
-                // Simplified overlap check, just check bounds of the full card, but since we draw from bottom to top, 
-                // later cards overwrite hover if they overlap.
                 if (mousePos.x >= cardPos.x && mousePos.x <= cardPos.x + pSize.x &&
                     mousePos.y >= cardPos.y && mousePos.y <= cardPos.y + pSize.y) {
-                    hoveredPile = i;
-                    hoveredCard = c;
+                    hoveredPile = (int)i;
+                    hoveredCard = (int)c;
                 }
             }
         }
     }
 
-    // Input Handling
-    if (mouseClicked && hoveredPile != -1) {
-        if (m_piles[hoveredPile].type == PileType::Stock) {
-            HandleClick(hoveredPile);
-        } else if (hoveredCard != -1 && CanPickup(hoveredPile, hoveredCard)) {
-            m_dragSourcePile = hoveredPile;
-            m_dragCardIndex = hoveredCard;
-            Pile& p = m_piles[hoveredPile];
-            m_dragCards.assign(p.cards.begin() + hoveredCard, p.cards.end());
-            
-            ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
-            int drawIndex = hoveredCard;
-            if (p.type == PileType::Waste && p.cards.size() > 3) {
-                drawIndex = std::max(0, (int)hoveredCard - (int)(p.cards.size() - 3));
-            }
-            ImVec2 cardPos = ImVec2(winPos.x + p.pos.x * scale + pOffset.x * drawIndex, 
-                                    winPos.y + p.pos.y * scale + pOffset.y * drawIndex);
-            m_dragOffset = ImVec2(mousePos.x - cardPos.x, mousePos.y - cardPos.y);
-        }
-    }
-
-    // Dropping
+    // 2. Input Handling
+    // Dropping Dragged Cards
     if (mouseReleased && m_dragSourcePile != -1) {
         ImVec2 dragBasePos = ImVec2(mousePos.x - m_dragOffset.x, mousePos.y - m_dragOffset.y);
         ImVec2 dragCenter = ImVec2(dragBasePos.x + CARD_SIZE.x * scale * 0.5f, dragBasePos.y + CARD_SIZE.y * scale * 0.5f);
@@ -591,7 +522,148 @@ void Game::UpdateAndDraw() {
         m_dragCards.clear();
     }
 
-    // Draw Dragged Cards
+    // Double click auto-move
+    if (doubleClicked && hoveredPile != -1 && hoveredCard != -1 && m_dragSourcePile == -1) {
+        if (CanPickup(hoveredPile, hoveredCard)) {
+            std::vector<Card> stack(m_piles[hoveredPile].cards.begin() + hoveredCard, m_piles[hoveredPile].cards.end());
+            int bestDrop = -1;
+            for (size_t i = 0; i < m_piles.size(); ++i) {
+                if (m_piles[i].type == PileType::Foundation && CanDrop(hoveredPile, stack, (int)i)) {
+                    bestDrop = (int)i; break;
+                }
+            }
+            if (bestDrop == -1) {
+                for (size_t i = 0; i < m_piles.size(); ++i) {
+                    if ((m_piles[i].type == PileType::Tableau || m_piles[i].type == PileType::FreeCellSlot) && CanDrop(hoveredPile, stack, (int)i)) {
+                        bestDrop = (int)i; break;
+                    }
+                }
+            }
+            if (bestDrop != -1) {
+                DoMove(hoveredPile, bestDrop, hoveredCard);
+            }
+        }
+    }
+    // Single Click / Start Drag
+    else if (mouseClicked && hoveredPile != -1) {
+        if (m_piles[hoveredPile].type == PileType::Stock) {
+            HandleClick(hoveredPile);
+        } else if (hoveredCard != -1 && CanPickup(hoveredPile, hoveredCard)) {
+            m_dragSourcePile = hoveredPile;
+            m_dragCardIndex = hoveredCard;
+            Pile& p = m_piles[hoveredPile];
+            m_dragCards.assign(p.cards.begin() + hoveredCard, p.cards.end());
+            
+            ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
+            int drawIndex = hoveredCard;
+            if (p.type == PileType::Waste && p.cards.size() > 3) {
+                drawIndex = std::max(0, (int)hoveredCard - (int)(p.cards.size() - 3));
+            }
+            ImVec2 cardPos = ImVec2(winPos.x + p.pos.x * scale + pOffset.x * drawIndex, 
+                                    winPos.y + p.pos.y * scale + pOffset.y * drawIndex);
+            m_dragOffset = ImVec2(mousePos.x - cardPos.x, mousePos.y - cardPos.y);
+        }
+    }
+
+    // 3. Auto Solve (Klondike)
+    if (m_currentType == GameType::Klondike && m_dragSourcePile == -1) {
+        bool allFaceUp = true;
+        bool hasCardsInPlay = false;
+
+        for (const auto& p : m_piles) {
+            if ((p.type == PileType::Stock || p.type == PileType::Waste) && !p.cards.empty()) {
+                allFaceUp = false; break;
+            }
+        }
+
+        if (allFaceUp) {
+            for (const auto& p : m_piles) {
+                if (p.type == PileType::Tableau) {
+                    for (const auto& c : p.cards) {
+                        if (!c.faceUp) { allFaceUp = false; break; }
+                    }
+                    if (!p.cards.empty()) hasCardsInPlay = true;
+                }
+                if (!allFaceUp) break;
+            }
+        }
+
+        if (allFaceUp && hasCardsInPlay) {
+            for (size_t i = 0; i < m_piles.size(); ++i) {
+                if (m_piles[i].type == PileType::Tableau && !m_piles[i].cards.empty()) {
+                    int cardIdx = (int)m_piles[i].cards.size() - 1;
+                    std::vector<Card> stack = { m_piles[i].cards.back() };
+                    bool moved = false;
+                    for (size_t f = 0; f < m_piles.size(); ++f) {
+                        if (m_piles[f].type == PileType::Foundation && CanDrop((int)i, stack, (int)f)) {
+                            DoMove((int)i, (int)f, cardIdx);
+                            moved = true;
+                            break;
+                        }
+                    }
+                    if (moved) break;
+                }
+            }
+        }
+    }
+
+    // 4. Draw piles
+    // Draw in correct order, from bottom to top
+    float dt = ImGui::GetIO().DeltaTime;
+    float animSpeed = 15.0f * dt;
+    if (animSpeed > 1.0f) animSpeed = 1.0f;
+    float flipSpeed = 10.0f * dt;
+
+    for (size_t i = 0; i < m_piles.size(); ++i) {
+        Pile& p = m_piles[i];
+        ImVec2 basePos = ImVec2(winPos.x + p.pos.x * scale, winPos.y + p.pos.y * scale);
+        ImVec2 pSize = ImVec2(p.size.x * scale, p.size.y * scale);
+        ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
+
+        if (p.cards.empty()) {
+            DrawEmptyPile(drawList, basePos, pSize, scale);
+        } else {
+            // Draw cards
+            for (size_t c = 0; c < p.cards.size(); ++c) {
+                // Skip drawing dragged cards in their original pile
+                if (m_dragSourcePile == (int)i && (int)c >= m_dragCardIndex) continue;
+
+                int drawIndex = (int)c;
+                if (p.type == PileType::Waste && p.cards.size() > 3) {
+                    drawIndex = std::max(0, (int)c - (int)(p.cards.size() - 3));
+                }
+
+                ImVec2 cardPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
+                Card& cardRef = p.cards[c];
+
+                if (!cardRef.hasInitializedPos) {
+                    cardRef.animPos = cardPos;
+                    cardRef.hasInitializedPos = true;
+                    cardRef.flipVisual = cardRef.faceUp ? 1.0f : -1.0f;
+                } else {
+                    cardRef.animPos.x += (cardPos.x - cardRef.animPos.x) * animSpeed;
+                    cardRef.animPos.y += (cardPos.y - cardRef.animPos.y) * animSpeed;
+                }
+
+                float targetFlip = cardRef.faceUp ? 1.0f : -1.0f;
+                if (cardRef.flipVisual < targetFlip) {
+                    cardRef.flipVisual += flipSpeed;
+                    if (cardRef.flipVisual > targetFlip) cardRef.flipVisual = targetFlip;
+                } else if (cardRef.flipVisual > targetFlip) {
+                    cardRef.flipVisual -= flipSpeed;
+                    if (cardRef.flipVisual < targetFlip) cardRef.flipVisual = targetFlip;
+                }
+
+                if (cardRef.flipVisual > 0.0f) {
+                    DrawCard(drawList, cardRef.animPos, pSize, cardRef, scale, cardRef.flipVisual);
+                } else {
+                    DrawCardBack(drawList, cardRef.animPos, pSize, scale, -cardRef.flipVisual);
+                }
+            }
+        }
+    }
+
+    // 5. Draw Dragged Cards
     if (m_dragSourcePile != -1 && !m_dragCards.empty()) {
         ImVec2 dragBasePos = ImVec2(mousePos.x - m_dragOffset.x, mousePos.y - m_dragOffset.y);
         ImVec2 pSize = ImVec2(CARD_SIZE.x * scale, CARD_SIZE.y * scale);
