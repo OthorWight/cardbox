@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <filesystem>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -19,7 +20,65 @@ const ImU32 COLOR_BLACK = IM_COL32(30, 30, 30, 255);
 const ImU32 COLOR_BORDER = IM_COL32(100, 100, 100, 255);
 
 Game::Game() {
-    InitGame(GameType::Klondike);
+    SetupLuaBindings();
+    LoadAvailableGames();
+    if (!m_availableGames.empty()) {
+        InitGame(m_availableGames[0]);
+    }
+}
+
+void Game::SetupLuaBindings() {
+    m_lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::table, sol::lib::string);
+
+    m_lua.new_usertype<ImVec2>("ImVec2",
+        sol::constructors<ImVec2(), ImVec2(float, float)>(),
+        "x", &ImVec2::x, "y", &ImVec2::y
+    );
+
+    m_lua.new_enum("Suit", "Hearts", Suit::Hearts, "Diamonds", Suit::Diamonds, "Clubs", Suit::Clubs, "Spades", Suit::Spades);
+    m_lua.new_enum("Rank", "Ace", Rank::Ace, "Two", Rank::Two, "Three", Rank::Three, "Four", Rank::Four, 
+                   "Five", Rank::Five, "Six", Rank::Six, "Seven", Rank::Seven, "Eight", Rank::Eight, 
+                   "Nine", Rank::Nine, "Ten", Rank::Ten, "Jack", Rank::Jack, "Queen", Rank::Queen, "King", Rank::King);
+    m_lua.new_enum("PileType", "Stock", PileType::Stock, "Waste", PileType::Waste, "Tableau", PileType::Tableau, 
+                   "Foundation", PileType::Foundation, "FreeCellSlot", PileType::FreeCellSlot);
+
+    m_lua.new_usertype<Card>("Card",
+        "rank", sol::property([](const Card& c) { return (int)c.rank; }),
+        "suit", sol::property([](const Card& c) { return (int)c.suit; }),
+        "faceUp", &Card::faceUp,
+        "Color", &Card::Color,
+        "IsRed", &Card::IsRed
+    );
+
+    m_lua.new_usertype<std::vector<Card>>("VectorCard",
+        sol::constructors<std::vector<Card>()>(),
+        "size", &std::vector<Card>::size,
+        "empty", &std::vector<Card>::empty,
+        "clear", &std::vector<Card>::clear,
+        "push_back", &std::vector<Card>::push_back,
+        "pop_back", &std::vector<Card>::pop_back,
+        "back", sol::resolve<Card&()>(&std::vector<Card>::back),
+        "front", sol::resolve<Card&()>(&std::vector<Card>::front),
+        "get", [](std::vector<Card>& v, int i) -> Card& { return v[i]; }
+    );
+
+    m_lua.new_usertype<Pile>("Pile",
+        "cards", &Pile::cards,
+        "pos", &Pile::pos,
+        "size", &Pile::size,
+        "offset", &Pile::offset,
+        "type", &Pile::type,
+        "id", &Pile::id
+    );
+
+    m_lua.new_usertype<std::vector<Pile>>("VectorPile",
+        sol::constructors<std::vector<Pile>()>(),
+        "size", &std::vector<Pile>::size,
+        "empty", &std::vector<Pile>::empty,
+        "clear", &std::vector<Pile>::clear,
+        "push_back", &std::vector<Pile>::push_back,
+        "get", [](std::vector<Pile>& v, int i) -> Pile& { return v[i]; }
+    );
 }
 
 void Game::CreateDeck(std::vector<Card>& deck, int numDecks) {
@@ -45,8 +104,18 @@ void Game::ShuffleDeck(std::vector<Card>& deck) {
     std::shuffle(deck.begin(), deck.end(), g);
 }
 
-void Game::InitGame(GameType type) {
-    m_currentType = type;
+void Game::LoadAvailableGames() {
+    m_availableGames.clear();
+    if (std::filesystem::exists("rules")) {
+        for (const auto& entry : std::filesystem::directory_iterator("rules")) {
+            if (entry.path().extension() == ".lua") {
+                m_availableGames.push_back(entry.path().string());
+            }
+        }
+    }
+}
+
+void Game::InitGame(const std::string& scriptPath) {
     m_piles.clear();
     m_dragSourcePile = -1;
     m_dragCardIndex = -1;
@@ -56,166 +125,24 @@ void Game::InitGame(GameType type) {
     m_bouncingCards.clear();
     m_winAnimTimer = 0.0f;
 
-    if (type == GameType::Klondike) {
-        InitKlondike();
-    } else if (type == GameType::FreeCell) {
-        InitFreeCell();
-    } else if (type == GameType::Spider) {
-        InitSpider();
-    }
-}
+    try {
+        m_currentScriptPath = scriptPath;
+        m_lua.script_file(scriptPath);
+        m_currentGameName = m_lua["GameName"].get_or<std::string>("Unknown Game");
+        m_currentHelpText = m_lua["HelpText"].get_or<std::string>("No help available.");
 
-void Game::InitKlondike() {
-    std::vector<Card> deck;
-    CreateDeck(deck, 1);
-    ShuffleDeck(deck);
+        std::vector<Card> deck;
+        int numDecks = m_lua["NumDecks"].get_or(1);
+        CreateDeck(deck, numDecks);
+        ShuffleDeck(deck);
 
-    // Layout config
-    float startX = 20.0f;
-    float startY = 40.0f;
-    float padX = CARD_SIZE.x + 20.0f;
-    
-    // 0: Stock
-    Pile stock;
-    stock.id = 0; stock.type = PileType::Stock;
-    stock.pos = ImVec2(startX, startY);
-    stock.size = CARD_SIZE;
-    stock.offset = ImVec2(0.5f, 0.5f); // tiny offset for visual depth
-    
-    // 1: Waste
-    Pile waste;
-    waste.id = 1; waste.type = PileType::Waste;
-    waste.pos = ImVec2(startX + padX, startY);
-    waste.size = CARD_SIZE;
-    waste.offset = ImVec2(20.0f, 0.0f); // horizontal offset
-
-    // 2-5: Foundations
-    std::vector<Pile> foundations(4);
-    for (int i = 0; i < 4; ++i) {
-        foundations[i].id = 2 + i;
-        foundations[i].type = PileType::Foundation;
-        foundations[i].pos = ImVec2(startX + padX * (3 + i), startY);
-        foundations[i].size = CARD_SIZE;
-        foundations[i].offset = ImVec2(0, 0);
-    }
-
-    // 6-12: Tableaus
-    std::vector<Pile> tableaus(7);
-    for (int i = 0; i < 7; ++i) {
-        tableaus[i].id = 6 + i;
-        tableaus[i].type = PileType::Tableau;
-        tableaus[i].pos = ImVec2(startX + padX * i, startY + CARD_SIZE.y + 30.0f);
-        tableaus[i].size = CARD_SIZE;
-        tableaus[i].offset = ImVec2(0, 25.0f);
-
-        // Deal cards
-        for (int j = 0; j <= i; ++j) {
-            Card c = deck.back();
-            deck.pop_back();
-            c.faceUp = (j == i);
-            tableaus[i].cards.push_back(c);
+        sol::protected_function initFunc = m_lua["Init"];
+        if (initFunc.valid()) {
+            initFunc(m_piles, deck);
         }
+    } catch (const sol::error& e) {
+        std::cerr << "Lua Error during InitGame: " << e.what() << std::endl;
     }
-
-    stock.cards = deck;
-
-    m_piles.push_back(stock);
-    m_piles.push_back(waste);
-    for (const auto& p : foundations) m_piles.push_back(p);
-    for (const auto& p : tableaus) m_piles.push_back(p);
-}
-
-void Game::InitFreeCell() {
-    std::vector<Card> deck;
-    CreateDeck(deck, 1);
-    ShuffleDeck(deck);
-
-    float startX = 20.0f;
-    float startY = 40.0f;
-    float padX = CARD_SIZE.x + 20.0f;
-
-    // 0-3: FreeCells
-    std::vector<Pile> freeCells(4);
-    for (int i = 0; i < 4; ++i) {
-        freeCells[i].id = i;
-        freeCells[i].type = PileType::FreeCellSlot;
-        freeCells[i].pos = ImVec2(startX + padX * i, startY);
-        freeCells[i].size = CARD_SIZE;
-        freeCells[i].offset = ImVec2(0, 0);
-    }
-
-    // 4-7: Foundations
-    std::vector<Pile> foundations(4);
-    for (int i = 0; i < 4; ++i) {
-        foundations[i].id = 4 + i;
-        foundations[i].type = PileType::Foundation;
-        foundations[i].pos = ImVec2(startX + padX * (4 + i), startY);
-        foundations[i].size = CARD_SIZE;
-        foundations[i].offset = ImVec2(0, 0);
-    }
-
-    // 8-15: Tableaus
-    std::vector<Pile> tableaus(8);
-    for (int i = 0; i < 8; ++i) {
-        tableaus[i].id = 8 + i;
-        tableaus[i].type = PileType::Tableau;
-        tableaus[i].pos = ImVec2(startX + padX * i, startY + CARD_SIZE.y + 30.0f);
-        tableaus[i].size = CARD_SIZE;
-        tableaus[i].offset = ImVec2(0, 25.0f);
-        
-        int count = (i < 4) ? 7 : 6;
-        for (int j = 0; j < count; ++j) {
-            Card c = deck.back();
-            deck.pop_back();
-            c.faceUp = true;
-            tableaus[i].cards.push_back(c);
-        }
-    }
-
-    for (const auto& p : freeCells) m_piles.push_back(p);
-    for (const auto& p : foundations) m_piles.push_back(p);
-    for (const auto& p : tableaus) m_piles.push_back(p);
-}
-
-void Game::InitSpider() {
-    std::vector<Card> deck;
-    CreateDeck(deck, 2); // 2 decks (104 cards)
-    // For simplicity, make it a 1-suit spider game for now by forcing all to Spades
-    for (auto& c : deck) c.suit = Suit::Spades;
-    ShuffleDeck(deck);
-
-    float startX = 20.0f;
-    float startY = 40.0f;
-    float padX = CARD_SIZE.x + 10.0f;
-
-    // 0-9: Tableaus
-    std::vector<Pile> tableaus(10);
-    for (int i = 0; i < 10; ++i) {
-        tableaus[i].id = i;
-        tableaus[i].type = PileType::Tableau;
-        tableaus[i].pos = ImVec2(startX + padX * i, startY + CARD_SIZE.y + 30.0f);
-        tableaus[i].size = CARD_SIZE;
-        tableaus[i].offset = ImVec2(0, 20.0f);
-        
-        int count = (i < 4) ? 6 : 5;
-        for (int j = 0; j < count; ++j) {
-            Card c = deck.back();
-            deck.pop_back();
-            c.faceUp = (j == count - 1);
-            tableaus[i].cards.push_back(c);
-        }
-        m_piles.push_back(tableaus[i]);
-    }
-
-    // 10: Stock
-    Pile stock;
-    stock.id = 10;
-    stock.type = PileType::Stock;
-    stock.pos = ImVec2(startX, startY);
-    stock.size = CARD_SIZE;
-    stock.offset = ImVec2(10.0f, 0.0f);
-    stock.cards = deck;
-    m_piles.push_back(stock);
 }
 
 bool Game::CanPickup(int pileIdx, int cardIdx) {
@@ -226,99 +153,21 @@ bool Game::CanPickup(int pileIdx, int cardIdx) {
     const Card& c = p.cards[cardIdx];
     if (!c.faceUp) return false;
 
-    // Different games have different rules for picking up multiple cards
-    if (m_currentType == GameType::Klondike) {
-        // Must be alternating colors and decreasing rank
-        for (int i = cardIdx; i < (int)p.cards.size() - 1; ++i) {
-            const Card& c1 = p.cards[i];
-            const Card& c2 = p.cards[i + 1];
-            if (c1.Color() == c2.Color() || (int)c1.rank - 1 != (int)c2.rank) {
-                return false;
-            }
-        }
-        return true;
-    } else if (m_currentType == GameType::FreeCell) {
-        // Can only pick up alternating colors, decreasing rank
-        // Strictly speaking, number of cards depends on empty freecells/tableaus, but we'll approximate first
-        for (int i = cardIdx; i < (int)p.cards.size() - 1; ++i) {
-            const Card& c1 = p.cards[i];
-            const Card& c2 = p.cards[i + 1];
-            if (c1.Color() == c2.Color() || (int)c1.rank - 1 != (int)c2.rank) {
-                return false;
-            }
-        }
-        return true;
-    } else if (m_currentType == GameType::Spider) {
-        // Must be same suit and decreasing rank
-        for (int i = cardIdx; i < (int)p.cards.size() - 1; ++i) {
-            const Card& c1 = p.cards[i];
-            const Card& c2 = p.cards[i + 1];
-            if (c1.suit != c2.suit || (int)c1.rank - 1 != (int)c2.rank) {
-                return false;
-            }
-        }
-        return true;
+    sol::protected_function canPickup = m_lua["CanPickup"];
+    if (canPickup.valid()) {
+        return canPickup(m_piles, pileIdx, cardIdx);
     }
-
-    return true;
+    return false;
 }
 
 bool Game::CanDrop(int sourcePileIdx, const std::vector<Card>& cards, int targetPileIdx) {
     if (targetPileIdx < 0 || targetPileIdx >= m_piles.size() || cards.empty()) return false;
     if (sourcePileIdx == targetPileIdx) return false;
     
-    const Pile& tp = m_piles[targetPileIdx];
-    const Card& dragBottom = cards.front();
-
-    if (m_currentType == GameType::Klondike) {
-        if (tp.type == PileType::Foundation) {
-            if (cards.size() > 1) return false;
-            if (tp.cards.empty()) {
-                return dragBottom.rank == Rank::Ace;
-            } else {
-                const Card& top = tp.cards.back();
-                return top.suit == dragBottom.suit && (int)top.rank + 1 == (int)dragBottom.rank;
-            }
-        } else if (tp.type == PileType::Tableau) {
-            if (tp.cards.empty()) {
-                return dragBottom.rank == Rank::King;
-            } else {
-                const Card& top = tp.cards.back();
-                return top.Color() != dragBottom.Color() && (int)top.rank - 1 == (int)dragBottom.rank;
-            }
-        }
-    } else if (m_currentType == GameType::FreeCell) {
-        if (tp.type == PileType::Foundation) {
-            if (cards.size() > 1) return false;
-            if (tp.cards.empty()) {
-                return dragBottom.rank == Rank::Ace;
-            } else {
-                const Card& top = tp.cards.back();
-                return top.suit == dragBottom.suit && (int)top.rank + 1 == (int)dragBottom.rank;
-            }
-        } else if (tp.type == PileType::Tableau) {
-            if (tp.cards.empty()) {
-                return true; // Any card to empty space
-            } else {
-                const Card& top = tp.cards.back();
-                return top.Color() != dragBottom.Color() && (int)top.rank - 1 == (int)dragBottom.rank;
-            }
-        } else if (tp.type == PileType::FreeCellSlot) {
-            return cards.size() == 1 && tp.cards.empty();
-        }
-    } else if (m_currentType == GameType::Spider) {
-        if (tp.type == PileType::Tableau) {
-            if (tp.cards.empty()) {
-                return true;
-            } else {
-                const Card& top = tp.cards.back();
-                return (int)top.rank - 1 == (int)dragBottom.rank;
-            }
-        } else if (tp.type == PileType::Foundation) {
-            return false; // In spider, cards auto-move to foundation when a full set is made
-        }
+    sol::protected_function canDrop = m_lua["CanDrop"];
+    if (canDrop.valid()) {
+        return canDrop(m_piles, sourcePileIdx, targetPileIdx, cards);
     }
-
     return false;
 }
 
@@ -330,84 +179,22 @@ void Game::DoMove(int sourcePileIdx, int targetPileIdx, int cardIdx) {
     tp.cards.insert(tp.cards.end(), sp.cards.begin() + cardIdx, sp.cards.end());
     sp.cards.erase(sp.cards.begin() + cardIdx, sp.cards.end());
 
-    // Flip top card of source if it's a tableau
-    if (!sp.cards.empty() && sp.type == PileType::Tableau && !sp.cards.back().faceUp) {
-        sp.cards.back().faceUp = true;
-    }
-
-    // Special Spider check: If tableau has full descending suit (K to A), remove it to foundation
-    if (m_currentType == GameType::Spider && tp.type == PileType::Tableau && tp.cards.size() >= 13) {
-        bool fullSet = true;
-        Suit s = tp.cards.back().suit;
-        int checkStart = (int)tp.cards.size() - 13;
-        for (int i = 0; i < 13; ++i) {
-            const Card& c = tp.cards[checkStart + i];
-            if (!c.faceUp || c.suit != s || (int)c.rank != 13 - i) {
-                fullSet = false;
-                break;
-            }
-        }
-        if (fullSet) {
-            tp.cards.erase(tp.cards.begin() + checkStart, tp.cards.end());
-            if (!tp.cards.empty() && !tp.cards.back().faceUp) {
-                tp.cards.back().faceUp = true;
-            }
-        }
+    sol::protected_function afterMove = m_lua["AfterMove"];
+    if (afterMove.valid()) {
+        afterMove(m_piles, sourcePileIdx, targetPileIdx, cardIdx);
     }
 }
 
 void Game::HandleClick(int pileIdx) {
     if (pileIdx < 0 || pileIdx >= m_piles.size()) return;
-    Pile& p = m_piles[pileIdx];
-
-    if (m_currentType == GameType::Klondike) {
-        if (p.type == PileType::Stock) {
-            // Find waste pile
-            int wasteIdx = -1;
-            for (size_t i = 0; i < m_piles.size(); ++i) {
-                if (m_piles[i].type == PileType::Waste) { wasteIdx = i; break; }
-            }
-            if (wasteIdx != -1) {
-                Pile& waste = m_piles[wasteIdx];
-                if (!p.cards.empty() || !waste.cards.empty()) {
-                    SaveStateForUndo();
-                }
-                if (!p.cards.empty()) {
-                    // Move 1 card to waste
-                    Card c = p.cards.back();
-                    p.cards.pop_back();
-                    c.faceUp = true;
-                    waste.cards.push_back(c);
-                } else {
-                    // Recycle waste to stock
-                    while (!waste.cards.empty()) {
-                        Card c = waste.cards.back();
-                        waste.cards.pop_back();
-                        c.faceUp = false;
-                        p.cards.push_back(c);
-                    }
-                }
-            }
-        }
-    } else if (m_currentType == GameType::Spider) {
-        if (p.type == PileType::Stock && !p.cards.empty()) {
-            SaveStateForUndo();
-            // Check if any tableaus are empty, in strict rules you can't deal if empty
-            // But we'll allow it or skip it for now.
-            
-            // Deal one card to each tableau
-            std::vector<int> tabIndices;
-            for (size_t i = 0; i < m_piles.size(); ++i) {
-                if (m_piles[i].type == PileType::Tableau) tabIndices.push_back(i);
-            }
-            for (int tIdx : tabIndices) {
-                if (p.cards.empty()) break;
-                Card c = p.cards.back();
-                p.cards.pop_back();
-                c.faceUp = true;
-                m_piles[tIdx].cards.push_back(c);
-            }
-        }
+    
+    if (m_piles[pileIdx].type == PileType::Stock) {
+        SaveStateForUndo();
+    }
+    
+    sol::protected_function handleClick = m_lua["HandleClick"];
+    if (handleClick.valid()) {
+        handleClick(m_piles, pileIdx);
     }
 }
 
@@ -425,9 +212,7 @@ void Game::UpdateAndDraw() {
     ImGui::GetIO().FontGlobalScale = scale;
 
     // Menu bar
-    bool showHelpKlondike = false;
-    bool showHelpFreeCell = false;
-    bool showHelpSpider = false;
+    bool showHelp = false;
     bool doUndo = false;
 
     if (ImGui::IsKeyPressed(ImGuiKey_Z) && ImGui::GetIO().KeyCtrl) {
@@ -437,67 +222,42 @@ void Game::UpdateAndDraw() {
         doUndo = true;
     }
     if (ImGui::IsKeyPressed(ImGuiKey_F2)) {
-        InitGame(m_currentType);
+        InitGame(m_currentScriptPath);
     }
 
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Game")) {
             if (ImGui::MenuItem("Undo", "Ctrl+Z", false, !m_undoStack.empty())) doUndo = true;
-            if (ImGui::MenuItem("Restart Game", "F2")) InitGame(m_currentType);
+            if (ImGui::MenuItem("Restart Game", "F2")) InitGame(m_currentScriptPath);
             ImGui::Separator();
-            if (ImGui::MenuItem("New Klondike")) InitGame(GameType::Klondike);
-            if (ImGui::MenuItem("New FreeCell")) InitGame(GameType::FreeCell);
-            if (ImGui::MenuItem("New Spider")) InitGame(GameType::Spider);
+            for (const auto& gamePath : m_availableGames) {
+                std::string displayName = std::filesystem::path(gamePath).stem().string();
+                if (ImGui::MenuItem(("New " + displayName).c_str())) {
+                    InitGame(gamePath);
+                }
+            }
             ImGui::Separator();
             if (ImGui::MenuItem("Exit")) exit(0);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Help")) {
-            if (ImGui::MenuItem("How to play Klondike")) showHelpKlondike = true;
-            if (ImGui::MenuItem("How to play FreeCell")) showHelpFreeCell = true;
-            if (ImGui::MenuItem("How to play Spider")) showHelpSpider = true;
+            if (ImGui::MenuItem(("How to play " + m_currentGameName).c_str())) showHelp = true;
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
     }
 
-    if (showHelpKlondike) ImGui::OpenPopup("Help: Klondike");
-    if (showHelpFreeCell) ImGui::OpenPopup("Help: FreeCell");
-    if (showHelpSpider) ImGui::OpenPopup("Help: Spider");
+    if (showHelp) ImGui::OpenPopup("Help");
 
     // Process undo
     if (doUndo) {
         Undo();
     }
 
-    if (ImGui::BeginPopupModal("Help: Klondike", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("Klondike Solitaire");
+    if (ImGui::BeginPopupModal("Help", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("%s", m_currentGameName.c_str());
         ImGui::Separator();
-        ImGui::Text("Goal: Move all 52 cards to the four foundation piles at the top right.");
-        ImGui::Text("Foundations are built up by suit, from Ace to King.");
-        ImGui::Text("Tableau piles can be built down by alternating colors.");
-        ImGui::Text("Click the stock pile (top left) to deal more cards.");
-        if (ImGui::Button("Close", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
-        ImGui::EndPopup();
-    }
-
-    if (ImGui::BeginPopupModal("Help: FreeCell", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("FreeCell Solitaire");
-        ImGui::Separator();
-        ImGui::Text("Goal: Move all cards to the four foundation piles at the top right.");
-        ImGui::Text("Foundations are built up by suit, from Ace to King.");
-        ImGui::Text("Tableau piles can be built down by alternating colors.");
-        ImGui::Text("Use the four free cells (top left) to temporarily store single cards.");
-        if (ImGui::Button("Close", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
-        ImGui::EndPopup();
-    }
-
-    if (ImGui::BeginPopupModal("Help: Spider", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("Spider Solitaire");
-        ImGui::Separator();
-        ImGui::Text("Goal: Assemble 13 cards of a suit, in descending sequence from King to Ace.");
-        ImGui::Text("Once a full suit is assembled, it is removed from play.");
-        ImGui::Text("Cards can be moved to other tableau columns if they are exactly one lower in rank.");
+        ImGui::Text("%s", m_currentHelpText.c_str());
         if (ImGui::Button("Close", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
         ImGui::EndPopup();
     }
@@ -507,37 +267,12 @@ void Game::UpdateAndDraw() {
     winPos.y += ImGui::GetFrameHeight(); 
 
     // Check Win Condition
-    if (!m_isWon && m_currentType == GameType::Klondike) {
-        int foundationCount = 0;
-        for (const auto& p : m_piles) {
-            if (p.type == PileType::Foundation) foundationCount += p.cards.size();
-        }
-        if (foundationCount == 52) {
-            bool animating = false;
-            for (size_t i = 0; i < m_piles.size(); ++i) {
-                const Pile& p = m_piles[i];
-                ImVec2 basePos = ImVec2(winPos.x + p.pos.x * scale, winPos.y + p.pos.y * scale);
-                ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
-                for (size_t c = 0; c < p.cards.size(); ++c) {
-                    int drawIndex = (int)c;
-                    if (p.type == PileType::Waste && p.cards.size() > 3) {
-                        drawIndex = std::max(0, (int)c - (int)(p.cards.size() - 3));
-                    }
-                    ImVec2 targetPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
-                    float dx = p.cards[c].animPos.x - targetPos.x;
-                    float dy = p.cards[c].animPos.y - targetPos.y;
-                    if (dx * dx + dy * dy > 4.0f) {
-                        animating = true;
-                        break;
-                    }
-                }
-                if (animating) break;
-            }
-            if (!animating) {
-                m_isWon = true;
-                m_winAnimTimer = 0.0f;
-                m_bouncingCards.clear();
-            }
+    if (!m_isWon) {
+        sol::protected_function isWonFunc = m_lua["IsWon"];
+        if (isWonFunc.valid() && isWonFunc(m_piles)) {
+            m_isWon = true;
+            m_winAnimTimer = 0.0f;
+            m_bouncingCards.clear();
         }
     }
 
@@ -687,44 +422,19 @@ void Game::UpdateAndDraw() {
         m_dragCards.clear();
     }
 
-    // 3. Auto Solve (Klondike)
-    if (m_currentType == GameType::Klondike && m_dragSourcePile == -1) {
-        bool allFaceUp = true;
-        bool hasCardsInPlay = false;
-
-        for (const auto& p : m_piles) {
-            if ((p.type == PileType::Stock || p.type == PileType::Waste) && !p.cards.empty()) {
-                allFaceUp = false; break;
-            }
-        }
-
-        if (allFaceUp) {
-            for (const auto& p : m_piles) {
-                if (p.type == PileType::Tableau) {
-                    for (const auto& c : p.cards) {
-                        if (!c.faceUp) { allFaceUp = false; break; }
-                    }
-                    if (!p.cards.empty()) hasCardsInPlay = true;
-                }
-                if (!allFaceUp) break;
-            }
-        }
-
-        if (allFaceUp && hasCardsInPlay) {
-            for (size_t i = 0; i < m_piles.size(); ++i) {
-                if (m_piles[i].type == PileType::Tableau && !m_piles[i].cards.empty()) {
-                    int cardIdx = (int)m_piles[i].cards.size() - 1;
-                    std::vector<Card> stack = { m_piles[i].cards.back() };
-                    bool moved = false;
-                    for (size_t f = 0; f < m_piles.size(); ++f) {
-                        if (m_piles[f].type == PileType::Foundation && CanDrop((int)i, stack, (int)f)) {
-                            // Do not SaveStateForUndo() here to avoid flooding the undo stack with single auto-moves
-                            DoMove((int)i, (int)f, cardIdx);
-                            moved = true;
-                            break;
-                        }
-                    }
-                    if (moved) break;
+    // 3. Auto Solve
+    if (m_dragSourcePile == -1) {
+        sol::protected_function autoSolve = m_lua["AutoSolve"];
+        if (autoSolve.valid()) {
+            sol::protected_function_result result = autoSolve(m_piles);
+            if (result.valid() && result.get_type() == sol::type::table) {
+                sol::table move = result;
+                if (!move.empty()) {
+                    int src = move[1];
+                    int dst = move[2];
+                    int idx = move[3];
+                    // Do not SaveStateForUndo() here to avoid flooding the undo stack with single auto-moves
+                    DoMove(src, dst, idx);
                 }
             }
         }

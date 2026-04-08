@@ -3,10 +3,10 @@
 #include <vector>
 #include <string>
 #include "imgui.h"
+#include <sol/sol.hpp>
 
 enum class Suit { Hearts, Diamonds, Clubs, Spades };
 enum class Rank { Ace = 1, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King };
-enum class GameType { Klondike, FreeCell, Spider };
 enum class PileType { Stock, Waste, Tableau, Foundation, FreeCellSlot };
 
 struct Card {
@@ -42,13 +42,17 @@ struct BouncingCard {
 class Game {
 public:
     Game();
-    void InitGame(GameType type);
+    void InitGame(const std::string& scriptPath);
     void UpdateAndDraw();
     bool IsWon() const;
 
 private:
-    GameType m_currentType;
+    sol::state m_lua;
     std::vector<Pile> m_piles;
+    std::vector<std::string> m_availableGames;
+    std::string m_currentGameName;
+    std::string m_currentHelpText;
+    std::string m_currentScriptPath;
     
     // Win state
     bool m_isWon = false;
@@ -68,15 +72,11 @@ private:
     void Undo();
 
     // Core game methods
+    void SetupLuaBindings();
+    void LoadAvailableGames();
     void CreateDeck(std::vector<Card>& deck, int numDecks = 1);
     void ShuffleDeck(std::vector<Card>& deck);
     
-    // Rule set initializations
-    void InitKlondike();
-    void InitFreeCell();
-    void InitSpider();
-
-    // Logic checks
     bool CanPickup(int pileIdx, int cardIdx);
     bool CanDrop(int sourcePileIdx, const std::vector<Card>& cards, int targetPileIdx);
     void DoMove(int sourcePileIdx, int targetPileIdx, int cardIdx);
