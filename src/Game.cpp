@@ -626,70 +626,72 @@ void Game::UpdateAndDraw() {
     } // End of if (!m_isWon)
 
     // 4. Draw piles
-    // Draw in correct order, from bottom to top
-    float dt = ImGui::GetIO().DeltaTime;
-    float animSpeed = 15.0f * dt;
-    if (animSpeed > 1.0f) animSpeed = 1.0f;
-    float flipSpeed = 10.0f * dt;
+    if (!m_isWon) {
+        // Draw in correct order, from bottom to top
+        float dt = ImGui::GetIO().DeltaTime;
+        float animSpeed = 15.0f * dt;
+        if (animSpeed > 1.0f) animSpeed = 1.0f;
+        float flipSpeed = 10.0f * dt;
 
-    for (size_t i = 0; i < m_piles.size(); ++i) {
-        Pile& p = m_piles[i];
-        ImVec2 basePos = ImVec2(winPos.x + p.pos.x * scale, winPos.y + p.pos.y * scale);
-        ImVec2 pSize = ImVec2(p.size.x * scale, p.size.y * scale);
-        ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
+        for (size_t i = 0; i < m_piles.size(); ++i) {
+            Pile& p = m_piles[i];
+            ImVec2 basePos = ImVec2(winPos.x + p.pos.x * scale, winPos.y + p.pos.y * scale);
+            ImVec2 pSize = ImVec2(p.size.x * scale, p.size.y * scale);
+            ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
 
-        if (p.cards.empty()) {
-            DrawEmptyPile(drawList, basePos, pSize, scale);
-        } else {
-            // Draw cards
-            for (size_t c = 0; c < p.cards.size(); ++c) {
-                // Skip drawing dragged cards in their original pile
-                if (m_dragSourcePile == (int)i && (int)c >= m_dragCardIndex) continue;
+            if (p.cards.empty()) {
+                DrawEmptyPile(drawList, basePos, pSize, scale);
+            } else {
+                // Draw cards
+                for (size_t c = 0; c < p.cards.size(); ++c) {
+                    // Skip drawing dragged cards in their original pile
+                    if (m_dragSourcePile == (int)i && (int)c >= m_dragCardIndex) continue;
 
-                int drawIndex = (int)c;
-                if (p.type == PileType::Waste && p.cards.size() > 3) {
-                    drawIndex = std::max(0, (int)c - (int)(p.cards.size() - 3));
-                }
+                    int drawIndex = (int)c;
+                    if (p.type == PileType::Waste && p.cards.size() > 3) {
+                        drawIndex = std::max(0, (int)c - (int)(p.cards.size() - 3));
+                    }
 
-                ImVec2 cardPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
-                Card& cardRef = p.cards[c];
+                    ImVec2 cardPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
+                    Card& cardRef = p.cards[c];
 
-                if (!cardRef.hasInitializedPos) {
-                    cardRef.animPos = cardPos;
-                    cardRef.hasInitializedPos = true;
-                    cardRef.flipVisual = cardRef.faceUp ? 1.0f : -1.0f;
-                } else {
-                    cardRef.animPos.x += (cardPos.x - cardRef.animPos.x) * animSpeed;
-                    cardRef.animPos.y += (cardPos.y - cardRef.animPos.y) * animSpeed;
-                }
+                    if (!cardRef.hasInitializedPos) {
+                        cardRef.animPos = cardPos;
+                        cardRef.hasInitializedPos = true;
+                        cardRef.flipVisual = cardRef.faceUp ? 1.0f : -1.0f;
+                    } else {
+                        cardRef.animPos.x += (cardPos.x - cardRef.animPos.x) * animSpeed;
+                        cardRef.animPos.y += (cardPos.y - cardRef.animPos.y) * animSpeed;
+                    }
 
-                float targetFlip = cardRef.faceUp ? 1.0f : -1.0f;
-                if (cardRef.flipVisual < targetFlip) {
-                    cardRef.flipVisual += flipSpeed;
-                    if (cardRef.flipVisual > targetFlip) cardRef.flipVisual = targetFlip;
-                } else if (cardRef.flipVisual > targetFlip) {
-                    cardRef.flipVisual -= flipSpeed;
-                    if (cardRef.flipVisual < targetFlip) cardRef.flipVisual = targetFlip;
-                }
+                    float targetFlip = cardRef.faceUp ? 1.0f : -1.0f;
+                    if (cardRef.flipVisual < targetFlip) {
+                        cardRef.flipVisual += flipSpeed;
+                        if (cardRef.flipVisual > targetFlip) cardRef.flipVisual = targetFlip;
+                    } else if (cardRef.flipVisual > targetFlip) {
+                        cardRef.flipVisual -= flipSpeed;
+                        if (cardRef.flipVisual < targetFlip) cardRef.flipVisual = targetFlip;
+                    }
 
-                if (cardRef.flipVisual > 0.0f) {
-                    DrawCard(drawList, cardRef.animPos, pSize, cardRef, scale, cardRef.flipVisual);
-                } else {
-                    DrawCardBack(drawList, cardRef.animPos, pSize, scale, -cardRef.flipVisual);
+                    if (cardRef.flipVisual > 0.0f) {
+                        DrawCard(drawList, cardRef.animPos, pSize, cardRef, scale, cardRef.flipVisual);
+                    } else {
+                        DrawCardBack(drawList, cardRef.animPos, pSize, scale, -cardRef.flipVisual);
+                    }
                 }
             }
         }
-    }
 
-    // 5. Draw Dragged Cards
-    if (m_dragSourcePile != -1 && !m_dragCards.empty()) {
-        ImVec2 dragBasePos = ImVec2(mousePos.x - m_dragOffset.x, mousePos.y - m_dragOffset.y);
-        ImVec2 pSize = ImVec2(CARD_SIZE.x * scale, CARD_SIZE.y * scale);
-        ImVec2 pOffset = ImVec2(m_piles[m_dragSourcePile].offset.x * scale, m_piles[m_dragSourcePile].offset.y * scale);
-        for (size_t c = 0; c < m_dragCards.size(); ++c) {
-            ImVec2 cardPos = ImVec2(dragBasePos.x + pOffset.x * c, dragBasePos.y + pOffset.y * c);
-            m_dragCards[c].animPos = cardPos; // Snap to mouse instantly
-            DrawCard(drawList, cardPos, pSize, m_dragCards[c], scale, 1.0f, true);
+        // 5. Draw Dragged Cards
+        if (m_dragSourcePile != -1 && !m_dragCards.empty()) {
+            ImVec2 dragBasePos = ImVec2(mousePos.x - m_dragOffset.x, mousePos.y - m_dragOffset.y);
+            ImVec2 pSize = ImVec2(CARD_SIZE.x * scale, CARD_SIZE.y * scale);
+            ImVec2 pOffset = ImVec2(m_piles[m_dragSourcePile].offset.x * scale, m_piles[m_dragSourcePile].offset.y * scale);
+            for (size_t c = 0; c < m_dragCards.size(); ++c) {
+                ImVec2 cardPos = ImVec2(dragBasePos.x + pOffset.x * c, dragBasePos.y + pOffset.y * c);
+                m_dragCards[c].animPos = cardPos; // Snap to mouse instantly
+                DrawCard(drawList, cardPos, pSize, m_dragCards[c], scale, 1.0f, true);
+            }
         }
     }
 
@@ -850,18 +852,18 @@ void Game::UpdateWinAnimation(ImDrawList* drawList, float scale) {
     
     m_winAnimTimer -= dt;
     
-    // Spawn a new bouncing card periodically from foundation piles
+    // Spawn a new bouncing card periodically from random piles
     if (m_winAnimTimer <= 0.0f) {
-        // Find a foundation pile with cards
-        int foundPileIdx = -1;
-        for (int i = m_piles.size() - 1; i >= 0; --i) {
-            if (m_piles[i].type == PileType::Foundation && !m_piles[i].cards.empty()) {
-                foundPileIdx = i;
-                break;
+        // Find all piles with cards
+        std::vector<int> validPiles;
+        for (size_t i = 0; i < m_piles.size(); ++i) {
+            if (!m_piles[i].cards.empty()) {
+                validPiles.push_back((int)i);
             }
         }
         
-        if (foundPileIdx != -1) {
+        if (!validPiles.empty()) {
+            int foundPileIdx = validPiles[rand() % validPiles.size()];
             Pile& p = m_piles[foundPileIdx];
             Card c = p.cards.back();
             p.cards.pop_back();
