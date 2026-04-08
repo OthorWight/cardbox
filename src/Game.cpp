@@ -708,7 +708,7 @@ void Game::UpdateAndDraw() {
             ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
 
             if (p.cards.empty()) {
-                DrawEmptyPile(drawList, basePos, pSize, scale);
+                DrawEmptyPile(drawList, basePos, pSize, scale, p.type);
             } else {
                 // Draw cards
                 for (size_t c = 0; c < p.cards.size(); ++c) {
@@ -770,10 +770,25 @@ void Game::UpdateAndDraw() {
 
 // Rendering Helpers
 
-void Game::DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale) {
+void Game::DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, PileType type) {
     float r = CORNER_RADIUS * scale;
     drawList->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(30, 60, 30, 100), r);
     drawList->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(50, 100, 50, 150), r, 0, 2.0f * scale);
+
+    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+    float fontSize = ImGui::GetFontSize() * 2.0f;
+    ImU32 textColor = IM_COL32(50, 100, 50, 200);
+
+    if (type == PileType::Foundation) {
+        ImVec2 tsize = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, "A");
+        drawList->AddText(ImGui::GetFont(), fontSize, ImVec2(pos.x + size.x * 0.5f - tsize.x * 0.5f, pos.y + size.y * 0.5f - tsize.y * 0.5f), textColor, "A");
+    } else if (type == PileType::FreeCellSlot) {
+        fontSize = ImGui::GetFontSize() * 1.5f;
+        ImVec2 tsize = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, "Free");
+        drawList->AddText(ImGui::GetFont(), fontSize, ImVec2(pos.x + size.x * 0.5f - tsize.x * 0.5f, pos.y + size.y * 0.5f - tsize.y * 0.5f), textColor, "Free");
+    }
+
+    ImGui::PopFont();
 }
 
 void Game::DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, float widthScale, bool isDragged) {
