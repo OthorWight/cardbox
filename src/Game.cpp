@@ -880,11 +880,17 @@ void Game::DrawSuit(ImDrawList* drawList, const ImVec2& center, float size, Suit
         float r = size * 0.5f;
         drawList->AddCircleFilled(ImVec2(center.x - r, center.y - r), r, color, 12);
         drawList->AddCircleFilled(ImVec2(center.x + r, center.y - r), r, color, 12);
-        
-        ImVec2 p1(center.x - r * 2.0f + 0.5f, center.y - r + 1.0f);
-        ImVec2 p2(center.x + r * 2.0f - 0.5f, center.y - r + 1.0f);
+
+        float d = std::sqrt(r * r + (size * 1.2f + r) * (size * 1.2f + r));
+        float angleRight = std::atan2(size * 1.2f + r, -r) - std::acos(r / d);
+        float angleLeft = std::atan2(size * 1.2f + r, r) + std::acos(r / d);
+
+        ImVec2 p1(center.x - r + r * std::cos(angleLeft), center.y - r + r * std::sin(angleLeft));
+        ImVec2 p2(center.x + r + r * std::cos(angleRight), center.y - r + r * std::sin(angleRight));
         ImVec2 p3(center.x, center.y + size * 1.2f);
-        drawList->AddTriangleFilled(p1, p2, p3, color);
+        ImVec2 p4(center.x, center.y - r); // Fill gap between circles
+
+        drawList->AddQuadFilled(p1, p4, p2, p3, color);
     } 
     else if (suit == Suit::Diamonds) {
         ImVec2 p1(center.x, center.y - size);
@@ -897,11 +903,17 @@ void Game::DrawSuit(ImDrawList* drawList, const ImVec2& center, float size, Suit
         float r = size * 0.5f;
         drawList->AddCircleFilled(ImVec2(center.x - r, center.y + r), r, color, 12);
         drawList->AddCircleFilled(ImVec2(center.x + r, center.y + r), r, color, 12);
-        
-        ImVec2 p1(center.x - r * 2.0f + 0.5f, center.y + r - 1.0f);
-        ImVec2 p2(center.x + r * 2.0f - 0.5f, center.y + r - 1.0f);
+
+        float d = std::sqrt(r * r + (-size * 1.2f - r) * (-size * 1.2f - r));
+        float angleRight = std::atan2(-size * 1.2f - r, -r) + std::acos(r / d);
+        float angleLeft = std::atan2(-size * 1.2f - r, r) - std::acos(r / d);
+
+        ImVec2 p1(center.x - r + r * std::cos(angleLeft), center.y + r + r * std::sin(angleLeft));
+        ImVec2 p2(center.x + r + r * std::cos(angleRight), center.y + r + r * std::sin(angleRight));
         ImVec2 p3(center.x, center.y - size * 1.2f);
-        drawList->AddTriangleFilled(p1, p2, p3, color);
+        ImVec2 p4(center.x, center.y + r); // Fill gap between circles
+
+        drawList->AddQuadFilled(p1, p4, p2, p3, color);
         
         // Base
         drawList->AddTriangleFilled(ImVec2(center.x, center.y + r), 
