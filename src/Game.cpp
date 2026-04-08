@@ -51,6 +51,7 @@ void Game::InitGame(GameType type) {
     m_dragSourcePile = -1;
     m_dragCardIndex = -1;
     m_dragCards.clear();
+    m_undoStack.clear();
     m_isWon = false;
     m_bouncingCards.clear();
     m_winAnimTimer = 0.0f;
@@ -368,6 +369,9 @@ void Game::HandleClick(int pileIdx) {
             }
             if (wasteIdx != -1) {
                 Pile& waste = m_piles[wasteIdx];
+                if (!p.cards.empty() || !waste.cards.empty()) {
+                    SaveStateForUndo();
+                }
                 if (!p.cards.empty()) {
                     // Move 1 card to waste
                     Card c = p.cards.back();
@@ -387,6 +391,7 @@ void Game::HandleClick(int pileIdx) {
         }
     } else if (m_currentType == GameType::Spider) {
         if (p.type == PileType::Stock && !p.cards.empty()) {
+            SaveStateForUndo();
             // Check if any tableaus are empty, in strict rules you can't deal if empty
             // But we'll allow it or skip it for now.
             
@@ -423,9 +428,16 @@ void Game::UpdateAndDraw() {
     bool showHelpKlondike = false;
     bool showHelpFreeCell = false;
     bool showHelpSpider = false;
+    bool doUndo = false;
+
+    if (ImGui::IsKeyPressed(ImGuiKey_Z) && ImGui::GetIO().KeyCtrl) {
+        doUndo = true;
+    }
 
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Game")) {
+            if (ImGui::MenuItem("Undo", "Ctrl+Z", false, !m_undoStack.empty())) doUndo = true;
+            ImGui::Separator();
             if (ImGui::MenuItem("New Klondike")) InitGame(GameType::Klondike);
             if (ImGui::MenuItem("New FreeCell")) InitGame(GameType::FreeCell);
             if (ImGui::MenuItem("New Spider")) InitGame(GameType::Spider);
@@ -445,6 +457,11 @@ void Game::UpdateAndDraw() {
     if (showHelpKlondike) ImGui::OpenPopup("Help: Klondike");
     if (showHelpFreeCell) ImGui::OpenPopup("Help: FreeCell");
     if (showHelpSpider) ImGui::OpenPopup("Help: Spider");
+
+    // Process undo
+    if (doUndo) {
+        Undo();
+    }
 
     if (ImGui::BeginPopupModal("Help: Klondike", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Klondike Solitaire");
@@ -590,6 +607,7 @@ void Game::UpdateAndDraw() {
         }
         
         if (bestDropPile != -1) {
+            SaveStateForUndo();
             Pile& sp = m_piles[m_dragSourcePile];
             for (size_t i = 0; i < m_dragCards.size(); ++i) {
                 sp.cards[m_dragCardIndex + i].animPos = m_dragCards[i].animPos;
@@ -625,6 +643,7 @@ void Game::UpdateAndDraw() {
                 }
             }
             if (bestDrop != -1) {
+                            SaveStateForUndo();
                 DoMove(hoveredPile, bestDrop, hoveredCard);
             }
         }
@@ -681,6 +700,7 @@ void Game::UpdateAndDraw() {
                     bool moved = false;
                     for (size_t f = 0; f < m_piles.size(); ++f) {
                         if (m_piles[f].type == PileType::Foundation && CanDrop((int)i, stack, (int)f)) {
+                            SaveStateForUndo();
                             DoMove((int)i, (int)f, cardIdx);
                             moved = true;
                             break;
@@ -1005,4 +1025,20 @@ void Game::UpdateWinAnimation(ImDrawList* drawList, float scale) {
         
         DrawCard(drawList, bc.pos, pSize, bc.card, scale, 1.0f, false);
     }
+}
+
+void Game::SaveStateForUndo() {
+    m_undoStack.push_back(m_piles);
+}
+
+void Game::Undo() {
+    if (m_undoStack.empty()) return;
+    m_piles = m_undoStack.back();
+    m_undoStack.pop_back();
+    
+    m_dragSourcePile = -1;
+    m_dragCardIndex = -1;
+    m_dragCards.clear();
+    m_isWon = false;
+    m_bouncingCards.clear();
 }

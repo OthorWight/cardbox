@@ -62,8 +62,11 @@ private:
     std::vector<Card> m_dragCards;
     ImVec2 m_dragOffset;
 
-    // Undo stack could be added here
-    
+    // Undo stack
+    std::vector<std::vector<Pile>> m_undoStack;
+    void SaveStateForUndo();
+    void Undo();
+
     // Core game methods
     void CreateDeck(std::vector<Card>& deck, int numDecks = 1);
     void ShuffleDeck(std::vector<Card>& deck);
