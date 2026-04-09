@@ -12,7 +12,7 @@ function Init(piles, deck)
     stock.id = 0; stock.type = PileType.Stock
     stock.pos = ImVec2.new(20, startY)
     stock.size = ImVec2.new(100.0, 140.0)
-    stock.offset = ImVec2.new(0.5, 0.5)
+    stock.offset = ImVec2.new(0.2, -0.5)
     piles:push_back(stock)
 
     -- 1: Waste
@@ -139,10 +139,6 @@ function HandleClick(piles, pileIdx)
             end
         end
     end
-end
-
-function IsWon(piles)
-    return true
 end
 
 function AutoSolve(piles)

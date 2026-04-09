@@ -284,10 +284,12 @@ void Game::UpdateAndDraw() {
             ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
 
             if (p.cards.empty()) {
-                if (mousePos.x >= basePos.x && mousePos.x <= basePos.x + pSize.x &&
-                    mousePos.y >= basePos.y && mousePos.y <= basePos.y + pSize.y) {
-                    hoveredPile = (int)i;
-                    hoveredCard = -1;
+                if (p.type != PileType::Invisible) {
+                    if (mousePos.x >= basePos.x && mousePos.x <= basePos.x + pSize.x &&
+                        mousePos.y >= basePos.y && mousePos.y <= basePos.y + pSize.y) {
+                        hoveredPile = (int)i;
+                        hoveredCard = -1;
+                    }
                 }
             } else {
                 for (size_t c = 0; c < p.cards.size(); ++c) {

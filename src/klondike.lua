@@ -10,14 +10,14 @@ function Init(piles, deck)
     stock.id = 0; stock.type = PileType.Stock
     stock.pos = ImVec2.new(startX, startY)
     stock.size = ImVec2.new(100.0, 140.0)
-    stock.offset = ImVec2.new(0.5, 0.5)
+    stock.offset = ImVec2.new(0.2, -0.5)
     piles:push_back(stock)
 
     local waste = Pile.new()
     waste.id = 1; waste.type = PileType.Waste
     waste.pos = ImVec2.new(startX + padX + 20, startY)
     waste.size = ImVec2.new(100.0, 140.0)
-    waste.offset = ImVec2.new(20.0, 0.0)
+    waste.offset = ImVec2.new(25.0, 0.0)
     piles:push_back(waste)
 
     for i = 0, 3 do
