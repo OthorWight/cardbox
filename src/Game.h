@@ -69,6 +69,14 @@ struct CardTrail {
     ImVec2 pos;
 };
 
+struct Particle {
+    ImVec2 pos;
+    ImVec2 velocity;
+    ImU32 color;
+    float life;
+    float size;
+};
+
 class Game {
 public:
     Game();
@@ -89,6 +97,7 @@ private:
     std::vector<BouncingCard> m_bouncingCards;
     std::vector<CardTrail> m_winTrails;
     float m_winAnimTimer = 0.0f;
+    std::vector<Particle> m_particles;
     void UpdateWinAnimation(ImDrawList* drawList, float scale);
 
     // Dragging state
@@ -112,9 +121,14 @@ private:
     bool CanDrop(int sourcePileIdx, const std::vector<Card>& cards, int targetPileIdx);
     void DoMove(int sourcePileIdx, int targetPileIdx, int cardIdx);
     void HandleClick(int pileIdx); // For things like stock pile clicking
+    
+    // Assets
+    ImTextureID m_cardTextures[4][13] = { 0 };
+    ImTextureID m_cardBackTexture = 0;
+    void LoadCardTextures();
 
     // Rendering
-    void DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, const Card& card, float scale, float widthScale = 1.0f, bool isDragged = false);
+    void DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, const Card& card, float scale, float widthScale = 1.0f, bool isDragged = false, bool isHovered = false);
     void DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, float widthScale = 1.0f, bool isDragged = false);
     void DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, PileType type);
     void DrawSuit(ImDrawList* drawList, const ImVec2& center, float size, Suit suit, ImU32 color);

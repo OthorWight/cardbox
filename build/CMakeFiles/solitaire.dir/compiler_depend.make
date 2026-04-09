@@ -1324,9 +1324,14 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
   _deps/sol2-src/include/sol/variadic_results.hpp \
   _deps/sol2-src/include/sol/version.hpp \
   _deps/sol2-src/include/sol/wrapper.hpp \
+  _deps/stb-src/stb_image.h \
+  /home/ben/code/sol/extern/glfw/include/GLFW/glfw3.h \
   /home/ben/code/sol/extern/imgui/imconfig.h \
   /home/ben/code/sol/extern/imgui/imgui.h \
   /home/ben/code/sol/src/Game.h \
+  /usr/include/GL/gl.h \
+  /usr/include/GL/glext.h \
+  /usr/include/KHR/khrplatform.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/bitsperlong.h \
   /usr/include/asm-generic/errno-base.h \
@@ -1481,6 +1486,7 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
   /usr/include/c++/15/iterator \
   /usr/include/c++/15/limits \
   /usr/include/c++/15/locale \
+  /usr/include/c++/15/math.h \
   /usr/include/c++/15/memory \
   /usr/include/c++/15/new \
   /usr/include/c++/15/numeric \
@@ -1641,12 +1647,16 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
   /usr/include/x86_64-linux-gnu/sys/select.h \
   /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/emmintrin.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/mm_malloc.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/mmintrin.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/xmmintrin.h \
   /usr/lib/linux/uapi/x86/asm/bitsperlong.h \
   /usr/lib/linux/uapi/x86/asm/errno.h \
   /usr/lib/linux/uapi/x86/asm/posix_types.h \
@@ -2331,8 +2341,6 @@ _deps/sol2-src/include/sol/environment.hpp:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/include/avx10_2-512satcvtintrin.h:
 
-/usr/lib/gcc/x86_64-linux-gnu/15/include/avx10_2-512convertintrin.h:
-
 _deps/lua-src/src/lualib.h:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h:
@@ -2358,6 +2366,10 @@ _deps/sol2-src/include/sol/userdata.hpp:
 /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/sigval_t.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/15/include/avx10_2-512convertintrin.h:
+
+_deps/stb-src/stb_image.h:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/include/avx10_2mediaintrin.h:
 
@@ -2688,6 +2700,10 @@ _deps/sol2-src/include/sol/assert.hpp:
 _deps/sol2-src/include/sol/pointer_like.hpp:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/include/amxcomplexintrin.h:
+
+/usr/include/c++/15/ext/aligned_buffer.h:
+
+/usr/include/x86_64-linux-gnu/bits/time64.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h:
 
@@ -3436,7 +3452,3 @@ _deps/sol2-src/include/sol/stack_core.hpp:
 /usr/include/c++/15/backward/binders.h:
 
 /usr/include/c++/15/exception:
-
-/usr/include/x86_64-linux-gnu/bits/time64.h:
-
-/usr/include/c++/15/ext/aligned_buffer.h:

@@ -104,6 +104,8 @@ set(CMAKE_MAKEFILE_OUTPUTS
 set(CMAKE_MAKEFILE_PRODUCTS
   "_deps/lua-subbuild/CMakeLists.txt"
   "_deps/sol2-subbuild/CMakeLists.txt"
+  "_deps/stb-subbuild/CMakeLists.txt"
+  "_deps/playing_cards_assets-subbuild/CMakeLists.txt"
   "CMakeFiles/CMakeDirectoryInformation.cmake"
   "_deps/sol2-build/DartConfiguration.tcl"
   "_deps/sol2-build/CMakeFiles/CTestScript.cmake"

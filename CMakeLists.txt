@@ -37,6 +37,21 @@ FetchContent_Declare(
 set(SOL2_BUILD_LUA OFF CACHE BOOL "Build Lua with sol2" FORCE)
 FetchContent_MakeAvailable(sol2)
 
+# stb_image
+FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(stb)
+
+# Download and extract playing cards assets
+FetchContent_Declare(
+    playing_cards_assets
+    URL https://github.com/hayeah/playing-cards-assets/archive/refs/heads/master.zip
+)
+FetchContent_MakeAvailable(playing_cards_assets)
+
 # GLFW
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -66,6 +81,7 @@ target_include_directories(solitaire PRIVATE
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
     ${glfw_SOURCE_DIR}/include
+    ${stb_SOURCE_DIR}
 )
 
 target_link_libraries(solitaire PRIVATE
@@ -84,4 +100,5 @@ file(GLOB LUA_SCRIPTS "src/*.lua")
 add_custom_command(TARGET solitaire POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/rules
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LUA_SCRIPTS} ${CMAKE_CURRENT_BINARY_DIR}/rules/
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${playing_cards_assets_SOURCE_DIR}/png ${CMAKE_CURRENT_BINARY_DIR}/cards
 )

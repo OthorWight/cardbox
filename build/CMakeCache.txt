@@ -321,8 +321,16 @@ FETCHCONTENT_QUIET:BOOL=ON
 FETCHCONTENT_SOURCE_DIR_LUA:PATH=
 
 //When not empty, overrides where to find pre-populated content
+// for playing_cards_assets
+FETCHCONTENT_SOURCE_DIR_PLAYING_CARDS_ASSETS:PATH=
+
+//When not empty, overrides where to find pre-populated content
 // for sol2
 FETCHCONTENT_SOURCE_DIR_SOL2:PATH=
+
+//When not empty, overrides where to find pre-populated content
+// for stb
+FETCHCONTENT_SOURCE_DIR_STB:PATH=
 
 //Enables UPDATE_DISCONNECTED behavior for all content population
 FETCHCONTENT_UPDATES_DISCONNECTED:BOOL=OFF
@@ -330,8 +338,14 @@ FETCHCONTENT_UPDATES_DISCONNECTED:BOOL=OFF
 //Enables UPDATE_DISCONNECTED behavior just for population of lua
 FETCHCONTENT_UPDATES_DISCONNECTED_LUA:BOOL=OFF
 
+//Enables UPDATE_DISCONNECTED behavior just for population of playing_cards_assets
+FETCHCONTENT_UPDATES_DISCONNECTED_PLAYING_CARDS_ASSETS:BOOL=OFF
+
 //Enables UPDATE_DISCONNECTED behavior just for population of sol2
 FETCHCONTENT_UPDATES_DISCONNECTED_SOL2:BOOL=OFF
+
+//Enables UPDATE_DISCONNECTED behavior just for population of stb
+FETCHCONTENT_UPDATES_DISCONNECTED_STB:BOOL=OFF
 
 //Path to a file.
 FREETYPE_INCLUDE_DIR_freetype2:PATH=/usr/include/freetype2

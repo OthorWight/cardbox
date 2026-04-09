@@ -33,6 +33,11 @@ int main(int argc, char** argv) {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
+    // Setup high-res scalable vector font (Available in ImGui 1.92+)
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.FontSizeBase = 22.0f;
+    io.Fonts->AddFontDefaultVector();
+
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
 

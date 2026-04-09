@@ -376,4 +376,12 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
  /usr/include/c++/15/bits/chrono.h /usr/include/c++/15/ratio \
  /usr/include/c++/15/bits/fs_path.h /usr/include/c++/15/iomanip \
  /usr/include/c++/15/bits/quoted_string.h /usr/include/c++/15/codecvt \
- /usr/include/c++/15/bits/fs_dir.h /usr/include/c++/15/bits/fs_ops.h
+ /usr/include/c++/15/bits/fs_dir.h /usr/include/c++/15/bits/fs_ops.h \
+ /home/ben/code/sol/build/_deps/stb-src/stb_image.h \
+ /usr/include/c++/15/math.h \
+ /usr/lib/gcc/x86_64-linux-gnu/15/include/emmintrin.h \
+ /usr/lib/gcc/x86_64-linux-gnu/15/include/xmmintrin.h \
+ /usr/lib/gcc/x86_64-linux-gnu/15/include/mmintrin.h \
+ /usr/lib/gcc/x86_64-linux-gnu/15/include/mm_malloc.h \
+ /home/ben/code/sol/extern/glfw/include/GLFW/glfw3.h /usr/include/GL/gl.h \
+ /usr/include/GL/glext.h /usr/include/KHR/khrplatform.h
