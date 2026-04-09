@@ -40,11 +40,11 @@ void Game::SetupLuaBindings() {
                    "Five", Rank::Five, "Six", Rank::Six, "Seven", Rank::Seven, "Eight", Rank::Eight, 
                    "Nine", Rank::Nine, "Ten", Rank::Ten, "Jack", Rank::Jack, "Queen", Rank::Queen, "King", Rank::King);
     m_lua.new_enum("PileType", "Stock", PileType::Stock, "Waste", PileType::Waste, "Tableau", PileType::Tableau, 
-                   "Foundation", PileType::Foundation, "FreeCellSlot", PileType::FreeCellSlot);
+                   "Foundation", PileType::Foundation, "FreeCellSlot", PileType::FreeCellSlot, "Invisible", PileType::Invisible);
 
     m_lua.new_usertype<Card>("Card",
-        "rank", sol::property([](const Card& c) { return (int)c.rank; }),
-        "suit", sol::property([](const Card& c) { return (int)c.suit; }),
+        "rank", sol::property([](const Card& c) { return (int)c.rank; }, [](Card& c, int r) { c.rank = (Rank)r; }),
+        "suit", sol::property([](const Card& c) { return (int)c.suit; }, [](Card& c, int s) { c.suit = (Suit)s; }),
         "faceUp", &Card::faceUp,
         "Color", &Card::Color,
         "IsRed", &Card::IsRed
@@ -127,6 +127,7 @@ void Game::InitGame(const std::string& scriptPath) {
     m_undoStack.clear();
     m_isWon = false;
     m_bouncingCards.clear();
+    m_winTrails.clear();
     m_winAnimTimer = 0.0f;
 
     try {
@@ -270,22 +271,12 @@ void Game::UpdateAndDraw() {
     // Offset for the menu bar height if necessary, but since it's full screen window we should just start below menu
     winPos.y += ImGui::GetFrameHeight(); 
 
-    // Check Win Condition
-    if (!m_isWon) {
-        sol::protected_function isWonFunc = m_lua["IsWon"];
-        if (isWonFunc.valid() && isWonFunc(m_piles)) {
-            m_isWon = true;
-            m_winAnimTimer = 0.0f;
-            m_bouncingCards.clear();
-        }
-    }
-
     // Interaction vars
     int hoveredPile = -1;
     int hoveredCard = -1;
 
     if (!m_isWon) {
-        // 1. Calculate Hover Logic BEFORE Drawing
+        // 2. Calculate Hover Logic BEFORE Drawing
         for (size_t i = 0; i < m_piles.size(); ++i) {
             Pile& p = m_piles[i];
             ImVec2 basePos = ImVec2(winPos.x + p.pos.x * scale, winPos.y + p.pos.y * scale);
@@ -315,7 +306,7 @@ void Game::UpdateAndDraw() {
             }
         }
 
-        // 2. Input Handling
+        // 3. Input Handling
         // Dropping Dragged Cards
         if (mouseReleased && m_dragSourcePile != -1) {
         ImVec2 dragBasePos = ImVec2(mousePos.x - m_dragOffset.x, mousePos.y - m_dragOffset.y);
@@ -426,7 +417,7 @@ void Game::UpdateAndDraw() {
         m_dragCards.clear();
     }
 
-    // 3. Auto Solve
+    // 4. Auto Solve
     if (m_dragSourcePile == -1) {
         sol::protected_function autoSolve = m_lua["AutoSolve"];
         if (autoSolve.valid()) {
@@ -522,6 +513,16 @@ void Game::UpdateAndDraw() {
         }
     }
 
+    // Check Win Condition (Only trigger once cards finish flying)
+    if (!m_isWon && !cardsAnimating) {
+        sol::protected_function isWonFunc = m_lua["IsWon"];
+        if (isWonFunc.valid() && isWonFunc(m_piles)) {
+            m_isWon = true;
+            m_winAnimTimer = 0.0f;
+            m_bouncingCards.clear();
+        }
+    }
+
     if (m_isWon && !cardsAnimating) {
         UpdateWinAnimation(drawList, scale);
     }
@@ -530,6 +531,8 @@ void Game::UpdateAndDraw() {
 // Rendering Helpers
 
 void Game::DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, PileType type) {
+    if (type == PileType::Invisible) return;
+
     float r = CORNER_RADIUS * scale;
     drawList->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(30, 60, 30, 100), r);
     drawList->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(50, 100, 50, 150), r, 0, 2.0f * scale);
@@ -738,12 +741,22 @@ void Game::UpdateWinAnimation(ImDrawList* drawList, float scale) {
         }
     }
     
+    // Draw all historic trails first so they appear behind the moving cards
+    ImVec2 pSize = ImVec2(CARD_SIZE.x * scale, CARD_SIZE.y * scale);
+    for (const auto& trail : m_winTrails) {
+        DrawCard(drawList, trail.pos, pSize, trail.card, scale, 1.0f, false);
+    }
+
     // Update and draw bouncing cards
     float gravity = 900.0f * scale;
     float bounceLoss = 0.8f;
-    ImVec2 pSize = ImVec2(CARD_SIZE.x * scale, CARD_SIZE.y * scale);
     
-    for (auto& bc : m_bouncingCards) {
+    for (auto it = m_bouncingCards.begin(); it != m_bouncingCards.end(); ) {
+        BouncingCard& bc = *it;
+        
+        // Save trail
+        m_winTrails.push_back({bc.card, bc.pos});
+
         bc.velocity.y += gravity * dt;
         bc.pos.x += bc.velocity.x * dt;
         bc.pos.y += bc.velocity.y * dt;
@@ -753,16 +766,15 @@ void Game::UpdateWinAnimation(ImDrawList* drawList, float scale) {
             bc.pos.y = winPos.y + winSize.y - pSize.y;
             bc.velocity.y = -bc.velocity.y * bounceLoss;
         }
-        // Bounce off sides
-        if (bc.pos.x < winPos.x) {
-            bc.pos.x = winPos.x;
-            bc.velocity.x = -bc.velocity.x;
-        } else if (bc.pos.x + pSize.x > winPos.x + winSize.x) {
-            bc.pos.x = winPos.x + winSize.x - pSize.x;
-            bc.velocity.x = -bc.velocity.x;
+        
+        // If it goes completely off the sides, remove it to prevent infinite trails
+        if (bc.pos.x + pSize.x < winPos.x || bc.pos.x > winPos.x + winSize.x) {
+            it = m_bouncingCards.erase(it);
+            continue;
         }
         
         DrawCard(drawList, bc.pos, pSize, bc.card, scale, 1.0f, false);
+        ++it;
     }
 }
 
@@ -780,4 +792,5 @@ void Game::Undo() {
     m_dragCards.clear();
     m_isWon = false;
     m_bouncingCards.clear();
+    m_winTrails.clear();
 }

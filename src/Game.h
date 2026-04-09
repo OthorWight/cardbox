@@ -15,7 +15,7 @@
 
 enum class Suit { Hearts, Diamonds, Clubs, Spades };
 enum class Rank { Ace = 1, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King };
-enum class PileType { Stock, Waste, Tableau, Foundation, FreeCellSlot };
+enum class PileType { Stock, Waste, Tableau, Foundation, FreeCellSlot, Invisible };
 
 struct Card {
     Rank rank;
@@ -64,6 +64,11 @@ struct BouncingCard {
     ImVec2 velocity;
 };
 
+struct CardTrail {
+    Card card;
+    ImVec2 pos;
+};
+
 class Game {
 public:
     Game();
@@ -82,6 +87,7 @@ private:
     // Win state
     bool m_isWon = false;
     std::vector<BouncingCard> m_bouncingCards;
+    std::vector<CardTrail> m_winTrails;
     float m_winAnimTimer = 0.0f;
     void UpdateWinAnimation(ImDrawList* drawList, float scale);
 
