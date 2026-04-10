@@ -319,7 +319,9 @@ void Game::UpdateAndDraw() {
     if (ImGui::BeginPopupModal("Help", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("%s", m_currentGameName.c_str());
         ImGui::Separator();
-        ImGui::Text("%s", m_currentHelpText.c_str());
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(m_currentHelpText.c_str());
+        ImGui::PopTextWrapPos();
         if (ImGui::Button("Close", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
         ImGui::EndPopup();
     }
