@@ -28,6 +28,15 @@ const ImU32 COLOR_RED = IM_COL32(220, 50, 50, 255);
 const ImU32 COLOR_BLACK = IM_COL32(30, 30, 30, 255);
 const ImU32 COLOR_BORDER = IM_COL32(100, 100, 100, 255);
 
+struct GamePreview {
+    std::string path;
+    std::string name;
+    std::vector<Pile> piles;
+};
+static std::vector<GamePreview> s_previews;
+static bool s_previews_loaded = false;
+static float s_deal_delay = 0.0f;
+
 Game::Game() {
     SetupLuaBindings();
     LoadCardTextures();
@@ -176,6 +185,7 @@ void Game::LoadCardTextures() {
 }
 
 void Game::InitGame(const std::string& scriptPath) {
+    m_currentScriptPath = scriptPath;
     m_piles.clear();
     m_dragSourcePile = -1;
     m_dragCardIndex = -1;
@@ -185,9 +195,11 @@ void Game::InitGame(const std::string& scriptPath) {
     m_particles.clear();
     m_winAnimTimer = 0.0f;
 
+    s_previews.clear();
+    s_previews_loaded = false;
+
     try {
-        m_currentScriptPath = scriptPath;
-        m_lua.script_file(scriptPath);
+        m_lua.script_file(m_currentScriptPath);
         m_currentGameName = m_lua["GameName"].get_or<std::string>("Unknown Game");
         m_currentHelpText = m_lua["HelpText"].get_or<std::string>("No help available.");
 
@@ -354,15 +366,7 @@ void Game::UpdateAndDraw() {
                                       IM_COL32(30, 90, 30, 255), IM_COL32(30, 90, 30, 255), IM_COL32(12, 35, 12, 255), IM_COL32(12, 35, 12, 255));
 
     if (!hasGame) {
-        struct GamePreview {
-            std::string path;
-            std::string name;
-            std::vector<Pile> piles;
-        };
-        static std::vector<GamePreview> previews;
-        static bool previews_loaded = false;
-
-        if (!previews_loaded) {
+        if (!s_previews_loaded) {
             for (const auto& path : m_availableGames) {
                 GamePreview p;
                 p.path = path;
@@ -376,15 +380,16 @@ void Game::UpdateAndDraw() {
                     if (initFunc.valid()) {
                         initFunc(p.piles, deck);
                     }
-                    previews.push_back(p);
+                    s_previews.push_back(p);
                 } catch (...) {
                     continue;
                 }
             }
-        std::sort(previews.begin(), previews.end(), [](const GamePreview& a, const GamePreview& b) {
+        std::sort(s_previews.begin(), s_previews.end(), [](const GamePreview& a, const GamePreview& b) {
             return a.name < b.name;
         });
-            previews_loaded = true;
+            s_previews_loaded = true;
+            s_deal_delay = 0.5f; // Wait half a second before dealing
         }
 
         float window_width = ImGui::GetWindowWidth();
@@ -401,13 +406,18 @@ void Game::UpdateAndDraw() {
         float preview_height = 250.0f * scale;
         float padding = 30.0f * scale;
         int columns = std::max(1, (int)((window_width - padding) / (preview_width + padding)));
-        int actual_columns = std::min((int)previews.size(), columns);
+        int actual_columns = std::min((int)s_previews.size(), columns);
         float grid_width = actual_columns * preview_width + std::max(0, actual_columns - 1) * padding;
         float start_x = std::max(0.0f, (window_width - grid_width) * 0.5f);
 
+        float dt = ImGui::GetIO().DeltaTime;
+        float animSpeed = 15.0f * dt;
+        if (animSpeed > 1.0f) animSpeed = 1.0f;
+        if (s_deal_delay > 0.0f) s_deal_delay -= dt;
+
         ImGui::SetCursorPos(ImVec2(start_x, 150.0f * scale + ImGui::GetFrameHeight()));
         int col = 0;
-        for (const auto& preview : previews) {
+        for (auto& preview : s_previews) {
             ImVec2 cursorPos = ImGui::GetCursorPos();
             ImVec2 screenPos = ImGui::GetCursorScreenPos();
 
@@ -465,22 +475,44 @@ void Game::UpdateAndDraw() {
             ImVec2 boardOffset = ImVec2(screenPos.x + bOffsetX - minLogX * mini_scale, screenPos.y + bOffsetY - minLogY * mini_scale);
 
 
-            for (const auto& p : preview.piles) {
+            int cardsInitializedThisFrame = 0;
+            for (auto& p : preview.piles) {
                 ImVec2 pPos = ImVec2(boardOffset.x + p.pos.x * mini_scale, boardOffset.y + p.pos.y * mini_scale);
                 ImVec2 pSize = ImVec2(p.size.x * mini_scale, p.size.y * mini_scale);
                 DrawEmptyPile(drawList, pPos, pSize, mini_scale, p.type);
 
                 int cCount = 0;
-                for (const auto& c : p.cards) {
+                for (auto& c : p.cards) {
                     int drawIndex = cCount;
                     if (p.type == PileType::Waste && p.cards.size() > 3) {
                         drawIndex = std::max(0, cCount - (int)(p.cards.size() - 3));
                     }
                     ImVec2 cPos = ImVec2(pPos.x + p.offset.x * mini_scale * drawIndex, pPos.y + p.offset.y * mini_scale * drawIndex);
-                    if (c.faceUp) {
-                        DrawCard(drawList, cPos, pSize, c, mini_scale, 1.0f, false, false);
+                    if (!c.hasInitializedPos) {
+                        if (s_deal_delay <= 0.0f && cardsInitializedThisFrame < 2) {
+                            ImVec2 startPos = ImVec2(screenPos.x + preview_width * 0.5f, screenPos.y + preview_height + 50.0f * scale);
+                            for (const auto& sp : preview.piles) {
+                                if (sp.type == PileType::Stock) {
+                                    int drawIndex = sp.cards.empty() ? 0 : (int)sp.cards.size() - 1;
+                                    startPos = ImVec2(boardOffset.x + (sp.pos.x + sp.offset.x * drawIndex) * mini_scale, boardOffset.y + (sp.pos.y + sp.offset.y * drawIndex) * mini_scale);
+                                    break;
+                                }
+                            }
+                            c.animPos = startPos;
+                            c.hasInitializedPos = true;
+                            cardsInitializedThisFrame++;
+                        } else {
+                            continue;
+                        }
                     } else {
-                        DrawCardBack(drawList, cPos, pSize, mini_scale, 1.0f, false);
+                        c.animPos.x += (cPos.x - c.animPos.x) * animSpeed;
+                        c.animPos.y += (cPos.y - c.animPos.y) * animSpeed;
+                    }
+
+                    if (c.faceUp) {
+                        DrawCard(drawList, c.animPos, pSize, c, mini_scale, 1.0f, false, false);
+                    } else {
+                        DrawCardBack(drawList, c.animPos, pSize, mini_scale, 1.0f, false);
                     }
                     cCount++;
                 }
@@ -791,7 +823,8 @@ void Game::UpdateAndDraw() {
                             ImVec2 startPos = boardBasePos;
                             for (const auto& sp : m_piles) {
                                 if (sp.type == PileType::Stock) {
-                                    startPos = ImVec2(boardBasePos.x + sp.pos.x * scale, boardBasePos.y + sp.pos.y * scale);
+                                    int drawIndex = sp.cards.empty() ? 0 : (int)sp.cards.size() - 1;
+                                    startPos = ImVec2(boardBasePos.x + (sp.pos.x + sp.offset.x * drawIndex) * scale, boardBasePos.y + (sp.pos.y + sp.offset.y * drawIndex) * scale);
                                     break;
                                 }
                             }

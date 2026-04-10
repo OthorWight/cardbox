@@ -46,11 +46,14 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(stb)
 
 # Download and extract playing cards assets
-FetchContent_Declare(
-    playing_cards_assets
-    URL https://github.com/hayeah/playing-cards-assets/archive/refs/heads/master.zip
-)
-FetchContent_MakeAvailable(playing_cards_assets)
+if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/cards")
+    FetchContent_Declare(
+        playing_cards_assets
+        URL https://github.com/hayeah/playing-cards-assets/archive/refs/heads/master.zip
+    )
+    FetchContent_MakeAvailable(playing_cards_assets)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${playing_cards_assets_SOURCE_DIR}/png ${CMAKE_CURRENT_BINARY_DIR}/cards)
+endif()
 
 # GLFW
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -100,5 +103,4 @@ file(GLOB LUA_SCRIPTS "src/*.lua")
 add_custom_command(TARGET solitaire POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/rules
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LUA_SCRIPTS} ${CMAKE_CURRENT_BINARY_DIR}/rules/
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${playing_cards_assets_SOURCE_DIR}/png ${CMAKE_CURRENT_BINARY_DIR}/cards
 )
