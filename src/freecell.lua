@@ -16,7 +16,7 @@ function Init(piles, deck)
     -- 4-7: Foundations (Top Right)
     for i = 0, 3 do
         local p = Pile.new()
-        p.pos = ImVec2.new(500 + i * 110, 20)
+        p.pos = ImVec2.new(460 + i * 110, 20)
         p.size = ImVec2.new(100, 140)
         p.offset = ImVec2.new(0, 0)
         p.type = PileType.Foundation

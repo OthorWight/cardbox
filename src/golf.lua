@@ -28,7 +28,7 @@ function Init(piles, deck)
     stock.id = 7
     stock.pos = ImVec2.new(startX, startY)
     stock.size = ImVec2.new(100.0, 140.0)
-    stock.offset = ImVec2.new(2.0, 0.0)
+    stock.offset = ImVec2.new(0.2, -0.5)
     stock.type = PileType.Stock
     piles:push_back(stock)
 

@@ -6,7 +6,7 @@ function Init(piles, deck)
     -- 0 to 7: Foundations
     for i = 0, 7 do
         local p = Pile.new()
-        p.pos = ImVec2.new(350 + i * 110, 20)
+        p.pos = ImVec2.new(240 + i * 110, 20)
         p.size = ImVec2.new(100, 140)
         p.offset = ImVec2.new(0, 0)
         p.type = PileType.Foundation
@@ -17,7 +17,7 @@ function Init(piles, deck)
     local stock = Pile.new()
     stock.pos = ImVec2.new(20, 20)
     stock.size = ImVec2.new(100, 140)
-    stock.offset = ImVec2.new(2, 0)
+    stock.offset = ImVec2.new(0.2, -0.5)
     stock.type = PileType.Stock
     piles:push_back(stock)
 
