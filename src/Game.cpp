@@ -332,6 +332,32 @@ void Game::UpdateAndDraw() {
     drawList->AddRectFilledMultiColor(winPos, ImVec2(winPos.x + ImGui::GetWindowWidth(), winPos.y + ImGui::GetWindowHeight()), 
                                       IM_COL32(30, 90, 30, 255), IM_COL32(30, 90, 30, 255), IM_COL32(12, 35, 12, 255), IM_COL32(12, 35, 12, 255));
 
+    // Calculate logical bounding box to center the board
+    float minLogicalX = 999999.0f;
+    float maxLogicalX = -999999.0f;
+    for (const auto& p : m_piles) {
+        if (p.type == PileType::Invisible) continue;
+        float leftEdge = p.pos.x;
+        float rightEdge = p.pos.x + p.size.x;
+        if (p.offset.x > 0) rightEdge += 2 * p.offset.x;
+        else if (p.offset.x < 0) leftEdge += 2 * p.offset.x;
+        
+        if (leftEdge < minLogicalX) minLogicalX = leftEdge;
+        if (rightEdge > maxLogicalX) maxLogicalX = rightEdge;
+    }
+    if (minLogicalX > maxLogicalX) {
+        minLogicalX = 0.0f;
+        maxLogicalX = 1280.0f;
+    }
+
+    float logicalWidth = maxLogicalX - minLogicalX;
+    float boardPixelWidth = logicalWidth * scale;
+    float boardOffsetX = (ImGui::GetWindowWidth() - boardPixelWidth) * 0.5f;
+    if (boardOffsetX < 0.0f) boardOffsetX = 0.0f;
+    
+    ImVec2 boardBasePos = winPos;
+    boardBasePos.x += boardOffsetX - (minLogicalX * scale);
+
     // Interaction vars
     int hoveredPile = -1;
     int hoveredCard = -1;
@@ -341,7 +367,7 @@ void Game::UpdateAndDraw() {
         if (ImGui::IsWindowHovered()) {
             for (size_t i = 0; i < m_piles.size(); ++i) {
                 Pile& p = m_piles[i];
-                ImVec2 basePos = ImVec2(winPos.x + p.pos.x * scale, winPos.y + p.pos.y * scale);
+                ImVec2 basePos = ImVec2(boardBasePos.x + p.pos.x * scale, boardBasePos.y + p.pos.y * scale);
                 ImVec2 pSize = ImVec2(p.size.x * scale, p.size.y * scale);
                 ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
     
@@ -392,8 +418,8 @@ void Game::UpdateAndDraw() {
                     targetDrawIndex = std::max(0, cCount - (int)(p.cards.size() - 3));
                 }
                 
-                ImVec2 targetPos = ImVec2(winPos.x + p.pos.x * scale + p.offset.x * scale * targetDrawIndex, 
-                                          winPos.y + p.pos.y * scale + p.offset.y * scale * targetDrawIndex);
+                ImVec2 targetPos = ImVec2(boardBasePos.x + p.pos.x * scale + p.offset.x * scale * targetDrawIndex, 
+                                          boardBasePos.y + p.pos.y * scale + p.offset.y * scale * targetDrawIndex);
                 ImVec2 targetCenter = ImVec2(targetPos.x + CARD_SIZE.x * scale * 0.5f, targetPos.y + CARD_SIZE.y * scale * 0.5f);
                 
                 float dx = dragCenter.x - targetCenter.x;
@@ -467,8 +493,8 @@ void Game::UpdateAndDraw() {
             if (p.type == PileType::Waste && p.cards.size() > 3) {
                 drawIndex = std::max(0, (int)hoveredCard - (int)(p.cards.size() - 3));
             }
-            ImVec2 cardPos = ImVec2(winPos.x + p.pos.x * scale + pOffset.x * drawIndex, 
-                                    winPos.y + p.pos.y * scale + pOffset.y * drawIndex);
+            ImVec2 cardPos = ImVec2(boardBasePos.x + p.pos.x * scale + pOffset.x * drawIndex, 
+                                    boardBasePos.y + p.pos.y * scale + pOffset.y * drawIndex);
             m_dragOffset = ImVec2(mousePos.x - cardPos.x, mousePos.y - cardPos.y);
         }
     }
@@ -514,7 +540,7 @@ void Game::UpdateAndDraw() {
 
         for (size_t i = 0; i < m_piles.size(); ++i) {
             Pile& p = m_piles[i];
-            ImVec2 basePos = ImVec2(winPos.x + p.pos.x * scale, winPos.y + p.pos.y * scale);
+            ImVec2 basePos = ImVec2(boardBasePos.x + p.pos.x * scale, boardBasePos.y + p.pos.y * scale);
             ImVec2 pSize = ImVec2(p.size.x * scale, p.size.y * scale);
             ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
 
@@ -588,8 +614,8 @@ void Game::UpdateAndDraw() {
                     targetDrawIndex = std::max(0, cCount - (int)(p.cards.size() - 3));
                 }
                 
-                ImVec2 targetPos = ImVec2(winPos.x + p.pos.x * scale + p.offset.x * scale * targetDrawIndex, 
-                                          winPos.y + p.pos.y * scale + p.offset.y * scale * targetDrawIndex);
+                ImVec2 targetPos = ImVec2(boardBasePos.x + p.pos.x * scale + p.offset.x * scale * targetDrawIndex, 
+                                          boardBasePos.y + p.pos.y * scale + p.offset.y * scale * targetDrawIndex);
                 ImVec2 targetCenter = ImVec2(targetPos.x + pSize.x * 0.5f, targetPos.y + pSize.y * 0.5f);
                 
                 float dx = targetCenter.x - dragCenter.x;
@@ -607,8 +633,8 @@ void Game::UpdateAndDraw() {
                         pullOffset.y += dy * strength * 0.6f;
                     } else {
                         // Magnetic Push (Repel invalid target)
-                        pullOffset.x -= (dx / dist) * strength * pSize.x * 0.25f;
-                        pullOffset.y -= (dy / dist) * strength * pSize.x * 0.25f;
+                        pullOffset.x -= (dx / dist) * strength * pSize.x * 0.05f;
+                        pullOffset.y -= (dy / dist) * strength * pSize.x * 0.05f;
                     }
                 }
             }
@@ -856,6 +882,34 @@ bool Game::IsWon() const {
 void Game::UpdateWinAnimation(ImDrawList* drawList, float scale) {
     ImVec2 winSize = ImGui::GetWindowSize();
     ImVec2 winPos = ImGui::GetWindowPos();
+    
+    ImVec2 boardWinPos = winPos;
+    boardWinPos.y += ImGui::GetFrameHeight();
+    
+    float minLogicalX = 999999.0f;
+    float maxLogicalX = -999999.0f;
+    for (const auto& p : m_piles) {
+        if (p.type == PileType::Invisible) continue;
+        float leftEdge = p.pos.x;
+        float rightEdge = p.pos.x + p.size.x;
+        if (p.offset.x > 0) rightEdge += 2 * p.offset.x;
+        else if (p.offset.x < 0) leftEdge += 2 * p.offset.x;
+        
+        if (leftEdge < minLogicalX) minLogicalX = leftEdge;
+        if (rightEdge > maxLogicalX) maxLogicalX = rightEdge;
+    }
+    if (minLogicalX > maxLogicalX) {
+        minLogicalX = 0.0f;
+        maxLogicalX = 1280.0f;
+    }
+    float logicalWidth = maxLogicalX - minLogicalX;
+    float boardPixelWidth = logicalWidth * scale;
+    float boardOffsetX = (ImGui::GetWindowWidth() - boardPixelWidth) * 0.5f;
+    if (boardOffsetX < 0.0f) boardOffsetX = 0.0f;
+    
+    ImVec2 boardBasePos = boardWinPos;
+    boardBasePos.x += boardOffsetX - (minLogicalX * scale);
+
     float dt = ImGui::GetIO().DeltaTime;
     
     m_winAnimTimer -= dt;
@@ -880,8 +934,8 @@ void Game::UpdateWinAnimation(ImDrawList* drawList, float scale) {
             bc.card = c;
             ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
             int drawIndex = p.cards.size(); // The position it was at
-            bc.pos = ImVec2(winPos.x + p.pos.x * scale + pOffset.x * drawIndex,
-                            winPos.y + p.pos.y * scale + pOffset.y * drawIndex);
+            bc.pos = ImVec2(boardBasePos.x + p.pos.x * scale + pOffset.x * drawIndex,
+                            boardBasePos.y + p.pos.y * scale + pOffset.y * drawIndex);
             
             // Initial velocity: random x, up y
             float vx = (rand() % 100 > 50 ? 1 : -1) * (200.0f + (rand() % 200)) * scale;
