@@ -1,5 +1,6 @@
 #include "Game.h"
 #include "imgui.h"
+#include "imgui_internal.h"
 #include <random>
 #include <algorithm>
 #include <cmath>
@@ -31,9 +32,6 @@ Game::Game() {
     SetupLuaBindings();
     LoadCardTextures();
     LoadAvailableGames();
-    if (!m_availableGames.empty()) {
-        InitGame(m_availableGames[0]);
-    }
 }
 
 void Game::SetupLuaBindings() {
@@ -250,13 +248,28 @@ void Game::DoMove(int sourcePileIdx, int targetPileIdx, int cardIdx) {
 void Game::HandleClick(int pileIdx) {
     if (pileIdx < 0 || pileIdx >= m_piles.size()) return;
     
-    if (m_piles[pileIdx].type == PileType::Stock) {
-        SaveStateForUndo();
-    }
+    // Deep copy state just in case the click mutates it
+    auto backup = m_piles;
     
     sol::protected_function handleClick = m_lua["HandleClick"];
     if (handleClick.valid()) {
         handleClick(m_piles, pileIdx);
+        
+        // Automatically save to undo stack if the Lua script changed the board state
+        bool changed = false;
+        if (m_piles.size() != backup.size()) changed = true;
+        else {
+            for (size_t i = 0; i < m_piles.size(); ++i) {
+                if (m_piles[i].cards.size() != backup[i].cards.size()) { changed = true; break; }
+                for (size_t c = 0; c < m_piles[i].cards.size(); ++c) {
+                    if (m_piles[i].cards[c].faceUp != backup[i].cards[c].faceUp || m_piles[i].cards[c].suit != backup[i].cards[c].suit || m_piles[i].cards[c].rank != backup[i].cards[c].rank) { changed = true; break; }
+                }
+                if (changed) break;
+            }
+        }
+        if (changed) {
+            m_undoStack.push_back(backup);
+        }
     }
 }
 
@@ -276,21 +289,27 @@ void Game::UpdateAndDraw() {
     // Menu bar
     bool showHelp = false;
     bool doUndo = false;
+    bool hasGame = !m_currentScriptPath.empty();
 
-    if (ImGui::IsKeyPressed(ImGuiKey_Z) && ImGui::GetIO().KeyCtrl) {
-        doUndo = true;
-    }
-    if (ImGui::IsMouseClicked(3)) { // Mouse Backward Button
-        doUndo = true;
-    }
-    if (ImGui::IsKeyPressed(ImGuiKey_F2)) {
-        InitGame(m_currentScriptPath);
+    if (hasGame) {
+        if (ImGui::IsKeyPressed(ImGuiKey_Z) && ImGui::GetIO().KeyCtrl) {
+            doUndo = true;
+        }
+        if (ImGui::IsMouseClicked(3)) { // Mouse Backward Button
+            doUndo = true;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_F2)) {
+            InitGame(m_currentScriptPath);
+        }
     }
 
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Game")) {
-            if (ImGui::MenuItem("Undo", "Ctrl+Z", false, !m_undoStack.empty())) doUndo = true;
-            if (ImGui::MenuItem("Restart Game", "F2")) InitGame(m_currentScriptPath);
+            if (ImGui::MenuItem("Return to Start Screen", NULL, false, hasGame)) {
+                m_currentScriptPath.clear();
+            }
+            if (ImGui::MenuItem("Undo", "Ctrl+Z", false, hasGame && !m_undoStack.empty())) doUndo = true;
+            if (ImGui::MenuItem("Restart Game", "F2", false, hasGame)) InitGame(m_currentScriptPath);
             ImGui::Separator();
             for (const auto& gamePath : m_availableGames) {
                 std::string displayName = std::filesystem::path(gamePath).stem().string();
@@ -303,7 +322,7 @@ void Game::UpdateAndDraw() {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Help")) {
-            if (ImGui::MenuItem(("How to play " + m_currentGameName).c_str())) showHelp = true;
+            if (ImGui::MenuItem(hasGame ? ("How to play " + m_currentGameName).c_str() : "How to play", NULL, false, hasGame)) showHelp = true;
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -333,6 +352,187 @@ void Game::UpdateAndDraw() {
     // 1. Draw a nice gradient background for a "Lit Felt Table" look
     drawList->AddRectFilledMultiColor(winPos, ImVec2(winPos.x + ImGui::GetWindowWidth(), winPos.y + ImGui::GetWindowHeight()), 
                                       IM_COL32(30, 90, 30, 255), IM_COL32(30, 90, 30, 255), IM_COL32(12, 35, 12, 255), IM_COL32(12, 35, 12, 255));
+
+    if (!hasGame) {
+        struct GamePreview {
+            std::string path;
+            std::string name;
+            std::vector<Pile> piles;
+        };
+        static std::vector<GamePreview> previews;
+        static bool previews_loaded = false;
+
+        if (!previews_loaded) {
+            for (const auto& path : m_availableGames) {
+                GamePreview p;
+                p.path = path;
+                try {
+                    m_lua.script_file(path);
+                    p.name = m_lua["GameName"].get_or<std::string>("Unknown");
+                    std::vector<Card> deck;
+                    CreateDeck(deck, m_lua["NumDecks"].get_or(1));
+                    ShuffleDeck(deck);
+                    sol::protected_function initFunc = m_lua["Init"];
+                    if (initFunc.valid()) {
+                        initFunc(p.piles, deck);
+                    }
+                    previews.push_back(p);
+                } catch (...) {
+                    continue;
+                }
+            }
+            previews_loaded = true;
+        }
+
+        float window_width = ImGui::GetWindowWidth();
+
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+        ImGui::SetWindowFontScale(2.5f * scale);
+        float text_width = ImGui::CalcTextSize("Select a Game").x;
+        ImGui::SetCursorPos(ImVec2((window_width - text_width) * 0.5f, 50.0f * scale + ImGui::GetFrameHeight()));
+        ImGui::TextColored(ImVec4(1, 1, 1, 1), "Select a Game");
+        ImGui::SetWindowFontScale(1.0f);
+        ImGui::PopFont();
+
+        float preview_width = 300.0f * scale;
+        float preview_height = 250.0f * scale;
+        float padding = 30.0f * scale;
+        int columns = std::max(1, (int)((window_width - padding) / (preview_width + padding)));
+        int actual_columns = std::min((int)previews.size(), columns);
+        float grid_width = actual_columns * preview_width + std::max(0, actual_columns - 1) * padding;
+        float start_x = std::max(0.0f, (window_width - grid_width) * 0.5f);
+
+        ImGui::SetCursorPos(ImVec2(start_x, 150.0f * scale + ImGui::GetFrameHeight()));
+        int col = 0;
+        for (const auto& preview : previews) {
+            ImVec2 cursorPos = ImGui::GetCursorPos();
+            ImVec2 screenPos = ImGui::GetCursorScreenPos();
+
+            ImGui::PushID(preview.path.c_str());
+            if (ImGui::InvisibleButton("##gamebtn", ImVec2(preview_width, preview_height))) {
+                InitGame(preview.path);
+                ImGui::PopID();
+                break;
+            }
+
+            bool hovered = ImGui::IsItemHovered();
+            if (hovered) {
+                drawList->AddRectFilled(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), IM_COL32(255, 255, 255, 40), 12.0f);
+                drawList->AddRect(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), IM_COL32(255, 255, 255, 200), 12.0f, 0, 3.0f);
+            } else {
+                drawList->AddRectFilled(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), IM_COL32(0, 0, 0, 80), 12.0f);
+                drawList->AddRect(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), IM_COL32(255, 255, 255, 100), 12.0f, 0, 1.0f);
+            }
+
+            float mini_scale = scale * 0.22f;
+            float minLogX = 999999.0f, maxLogX = -999999.0f;
+            float minLogY = 999999.0f, maxLogY = -999999.0f;
+            for (const auto& p : preview.piles) {
+                if (p.type == PileType::Invisible) continue;
+                int maxDrawIndex = 0;
+                if (!p.cards.empty()) {
+                    maxDrawIndex = (int)p.cards.size() - 1;
+                    if (p.type == PileType::Waste && p.cards.size() > 3) {
+                        maxDrawIndex = std::max(0, maxDrawIndex - (int)(p.cards.size() - 3));
+                    }
+                }
+                float leftEdge = p.pos.x;
+                float rightEdge = p.pos.x + p.size.x;
+                if (p.offset.x > 0) rightEdge += p.offset.x * maxDrawIndex;
+                else if (p.offset.x < 0) leftEdge += p.offset.x * maxDrawIndex;
+                
+                float topEdge = p.pos.y;
+                float bottomEdge = p.pos.y + p.size.y;
+                if (p.offset.y > 0) bottomEdge += p.offset.y * maxDrawIndex;
+                else if (p.offset.y < 0) topEdge += p.offset.y * maxDrawIndex;
+                
+                if (leftEdge < minLogX) minLogX = leftEdge;
+                if (rightEdge > maxLogX) maxLogX = rightEdge;
+                if (topEdge < minLogY) minLogY = topEdge;
+                if (bottomEdge > maxLogY) maxLogY = bottomEdge;
+            }
+            if (minLogX > maxLogX) { minLogX = 0.0f; maxLogX = 800.0f; minLogY = 0.0f; maxLogY = 600.0f; }
+            
+            float contentW = (maxLogX - minLogX) * mini_scale;
+            float contentH = (maxLogY - minLogY) * mini_scale;
+            float bOffsetX = (preview_width - contentW) * 0.5f;
+            float availH = preview_height - 40.0f * scale;
+            float bOffsetY = 40.0f * scale + std::max(0.0f, (availH - contentH) * 0.5f);
+
+            ImVec2 boardOffset = ImVec2(screenPos.x + bOffsetX - minLogX * mini_scale, screenPos.y + bOffsetY - minLogY * mini_scale);
+
+
+            for (const auto& p : preview.piles) {
+                ImVec2 pPos = ImVec2(boardOffset.x + p.pos.x * mini_scale, boardOffset.y + p.pos.y * mini_scale);
+                ImVec2 pSize = ImVec2(p.size.x * mini_scale, p.size.y * mini_scale);
+                DrawEmptyPile(drawList, pPos, pSize, mini_scale, p.type);
+
+                int cCount = 0;
+                for (const auto& c : p.cards) {
+                    int drawIndex = cCount;
+                    if (p.type == PileType::Waste && p.cards.size() > 3) {
+                        drawIndex = std::max(0, cCount - (int)(p.cards.size() - 3));
+                    }
+                    ImVec2 cPos = ImVec2(pPos.x + p.offset.x * mini_scale * drawIndex, pPos.y + p.offset.y * mini_scale * drawIndex);
+                    if (c.faceUp) {
+                        DrawCard(drawList, cPos, pSize, c, mini_scale, 1.0f, false, false);
+                    } else {
+                        DrawCardBack(drawList, cPos, pSize, mini_scale, 1.0f, false);
+                    }
+                    cCount++;
+                }
+            }
+
+            // Draw title text on top with a black outline
+            float outline = 1.5f * scale;
+            float tSize = ImGui::GetFontSize() * 1.5f * scale;
+            float tWrap = preview_width - 30.0f * scale;
+            ImVec2 textSize = ImGui::GetFont()->CalcTextSizeA(tSize, FLT_MAX, tWrap, preview.name.c_str());
+            ImVec2 tPos = ImVec2(screenPos.x + (preview_width - textSize.x) * 0.5f, screenPos.y + 15.0f * scale);
+            ImU32 outlineCol = IM_COL32(0, 0, 0, 255);
+            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x - outline, tPos.y - outline), outlineCol, preview.name.c_str(), NULL, tWrap);
+            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x + outline, tPos.y - outline), outlineCol, preview.name.c_str(), NULL, tWrap);
+            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x - outline, tPos.y + outline), outlineCol, preview.name.c_str(), NULL, tWrap);
+            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x + outline, tPos.y + outline), outlineCol, preview.name.c_str(), NULL, tWrap);
+            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x - outline, tPos.y), outlineCol, preview.name.c_str(), NULL, tWrap);
+            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x + outline, tPos.y), outlineCol, preview.name.c_str(), NULL, tWrap);
+            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x, tPos.y - outline), outlineCol, preview.name.c_str(), NULL, tWrap);
+            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x, tPos.y + outline), outlineCol, preview.name.c_str(), NULL, tWrap);
+            drawList->AddText(ImGui::GetFont(), tSize, tPos, IM_COL32_WHITE, preview.name.c_str(), NULL, tWrap);
+
+            ImGui::PopID();
+
+            col++;
+            if (col < columns) {
+                ImGui::SetCursorPos(ImVec2(cursorPos.x + preview_width + padding, cursorPos.y));
+            } else {
+                col = 0;
+                ImGui::SetCursorPos(ImVec2(start_x, cursorPos.y + preview_height + padding));
+            }
+        }
+        return;
+    }
+    
+    // Back arrow when in-game
+    if (hasGame) {
+        ImGui::SetCursorPos(ImVec2(10.0f * scale, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 0));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(255, 255, 255, 50));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(255, 255, 255, 100));
+        
+        if (ImGui::ArrowButton("##BackToStart", ImGuiDir_Left)) {
+            m_currentScriptPath.clear();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Return to Start Screen");
+
+        ImGui::SameLine();
+        if (ImGui::Button("Reload")) {
+            InitGame(m_currentScriptPath);
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Restart Game");
+
+        ImGui::PopStyleColor(3);
+    }
 
     // Calculate logical bounding box to center the board
     float minLogicalX = 999999.0f;
@@ -364,7 +564,15 @@ void Game::UpdateAndDraw() {
     int hoveredPile = -1;
     int hoveredCard = -1;
 
-    if (!m_isWon) {
+    // Are cards being dealt initially?
+    bool isDealing = false;
+    for (const auto& p : m_piles) {
+        for (const auto& c : p.cards) {
+            if (!c.hasInitializedPos) isDealing = true;
+        }
+    }
+
+    if (!isDealing && !m_isWon) {
         // 2. Calculate Hover Logic BEFORE Drawing
         if (ImGui::IsWindowHovered()) {
             for (size_t i = 0; i < m_piles.size(); ++i) {
@@ -407,8 +615,9 @@ void Game::UpdateAndDraw() {
         
         int bestDropPile = -1;
         float bestDistSq = 9999999.0f;
+        bool isClick = !ImGui::IsMouseDragPastThreshold(0, 4.0f * scale);
         
-        if (ImGui::IsWindowHovered()) {
+        if (!isClick && ImGui::IsWindowHovered()) {
             for (size_t i = 0; i < m_piles.size(); ++i) {
                 if ((int)i == m_dragSourcePile) continue;
                 
@@ -450,6 +659,10 @@ void Game::UpdateAndDraw() {
             for (size_t i = 0; i < m_dragCards.size(); ++i) {
                 sp.cards[m_dragCardIndex + i].animPos = m_dragCards[i].animPos;
             }
+            
+            if (isClick) {
+                HandleClick(m_dragSourcePile);
+            }
         }
         
         m_dragSourcePile = -1;
@@ -484,20 +697,26 @@ void Game::UpdateAndDraw() {
     else if (mouseClicked && hoveredPile != -1) {
         if (m_piles[hoveredPile].type == PileType::Stock) {
             HandleClick(hoveredPile);
-        } else if (hoveredCard != -1 && CanPickup(hoveredPile, hoveredCard)) {
-            m_dragSourcePile = hoveredPile;
-            m_dragCardIndex = hoveredCard;
-            Pile& p = m_piles[hoveredPile];
-            m_dragCards.assign(p.cards.begin() + hoveredCard, p.cards.end());
-            
-            ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
-            int drawIndex = hoveredCard;
-            if (p.type == PileType::Waste && p.cards.size() > 3) {
-                drawIndex = std::max(0, (int)hoveredCard - (int)(p.cards.size() - 3));
+        } else if (hoveredCard != -1) {
+            if (CanPickup(hoveredPile, hoveredCard)) {
+                m_dragSourcePile = hoveredPile;
+                m_dragCardIndex = hoveredCard;
+                Pile& p = m_piles[hoveredPile];
+                m_dragCards.assign(p.cards.begin() + hoveredCard, p.cards.end());
+                
+                ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
+                int drawIndex = hoveredCard;
+                if (p.type == PileType::Waste && p.cards.size() > 3) {
+                    drawIndex = std::max(0, (int)hoveredCard - (int)(p.cards.size() - 3));
+                }
+                ImVec2 cardPos = ImVec2(boardBasePos.x + p.pos.x * scale + pOffset.x * drawIndex, 
+                                        boardBasePos.y + p.pos.y * scale + pOffset.y * drawIndex);
+                m_dragOffset = ImVec2(mousePos.x - cardPos.x, mousePos.y - cardPos.y);
+            } else {
+                HandleClick(hoveredPile);
             }
-            ImVec2 cardPos = ImVec2(boardBasePos.x + p.pos.x * scale + pOffset.x * drawIndex, 
-                                    boardBasePos.y + p.pos.y * scale + pOffset.y * drawIndex);
-            m_dragOffset = ImVec2(mousePos.x - cardPos.x, mousePos.y - cardPos.y);
+        } else if (m_piles[hoveredPile].cards.empty()) {
+            HandleClick(hoveredPile);
         }
     }
 
@@ -534,6 +753,7 @@ void Game::UpdateAndDraw() {
     // 4. Draw piles
     bool cardsAnimating = false;
     {
+        int cardsInitializedThisFrame = 0;
         // Draw in correct order, from bottom to top
         float dt = ImGui::GetIO().DeltaTime;
         float animSpeed = 15.0f * dt;
@@ -563,9 +783,21 @@ void Game::UpdateAndDraw() {
                     Card& cardRef = p.cards[c];
 
                     if (!cardRef.hasInitializedPos) {
-                        cardRef.animPos = cardPos;
-                        cardRef.hasInitializedPos = true;
-                        cardRef.flipVisual = cardRef.faceUp ? 1.0f : -1.0f;
+                        if (cardsInitializedThisFrame < 2) {
+                            ImVec2 startPos = boardBasePos;
+                            for (const auto& sp : m_piles) {
+                                if (sp.type == PileType::Stock) {
+                                    startPos = ImVec2(boardBasePos.x + sp.pos.x * scale, boardBasePos.y + sp.pos.y * scale);
+                                    break;
+                                }
+                            }
+                            cardRef.animPos = startPos;
+                            cardRef.hasInitializedPos = true;
+                            cardRef.flipVisual = -1.0f;
+                            cardsInitializedThisFrame++;
+                        } else {
+                            continue;
+                        }
                     } else {
                         cardRef.animPos.x += (cardPos.x - cardRef.animPos.x) * animSpeed;
                         cardRef.animPos.y += (cardPos.y - cardRef.animPos.y) * animSpeed;
@@ -696,15 +928,19 @@ void Game::DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& 
     drawList->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(50, 100, 50, 150), r, 0, 2.0f * scale);
 
     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
-    float fontSize = ImGui::GetFontSize() * 2.0f;
+        float fontSize = 44.0f * scale; // Base 22.0f * 2.0f
     ImU32 textColor = IM_COL32(50, 100, 50, 200);
 
     if (type == PileType::Foundation) {
         ImVec2 tsize = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, "A");
         drawList->AddText(ImGui::GetFont(), fontSize, ImVec2(pos.x + size.x * 0.5f - tsize.x * 0.5f, pos.y + size.y * 0.5f - tsize.y * 0.5f), textColor, "A");
     } else if (type == PileType::FreeCellSlot) {
-        fontSize = ImGui::GetFontSize() * 1.5f;
+            fontSize = 32.0f * scale;
         ImVec2 tsize = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, "Free");
+            if (tsize.x > size.x - 4.0f * scale) {
+                fontSize *= (size.x - 4.0f * scale) / tsize.x;
+                tsize = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, "Free");
+            }
         drawList->AddText(ImGui::GetFont(), fontSize, ImVec2(pos.x + size.x * 0.5f - tsize.x * 0.5f, pos.y + size.y * 0.5f - tsize.y * 0.5f), textColor, "Free");
     }
 
@@ -786,7 +1022,7 @@ void Game::DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size,
             const char* rankStr = ranks[(int)card.rank];
             
             float pad = 5.0f * scale;
-            float fontSize = ImGui::GetFontSize() * 1.5f;
+            float fontSize = 33.0f * scale; // Base 22.0f * 1.5f
 
             ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
             drawList->AddText(ImGui::GetFont(), fontSize, ImVec2(pos.x + pad, pos.y + pad), color, rankStr);

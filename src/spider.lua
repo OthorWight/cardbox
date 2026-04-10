@@ -1,4 +1,4 @@
-GameName = "Spider (1 Suit)"
+GameName = "Spider"
 HelpText = "Build 8 sequences of Spades from King to Ace.\nCompleted sequences automatically move to the foundations."
 NumDecks = 2
 
@@ -87,7 +87,7 @@ end
 
 function AfterMove(piles, srcIdx, dstIdx, cardIdx)
     local src = piles:get(srcIdx)
-    if not src.cards:empty() and not src.cards:back().faceUp then
+    if srcIdx >= 9 and not src.cards:empty() and not src.cards:back().faceUp then
         src.cards:back().faceUp = true
     end
     
