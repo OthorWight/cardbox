@@ -95,6 +95,8 @@ function AfterMove(piles, sourcePileIdx, targetPileIdx, cardIdx)
 end
 
 function HandleClick(piles, pileIdx)
+    if pileIdx ~= 0 then return end
+
     local p = piles:get(pileIdx)
     local wasteIdx = 1
     local waste = piles:get(wasteIdx)

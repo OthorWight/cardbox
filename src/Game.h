@@ -58,17 +58,6 @@ struct Pile {
     }
 };
 
-struct BouncingCard {
-    Card card;
-    ImVec2 pos;
-    ImVec2 velocity;
-};
-
-struct CardTrail {
-    Card card;
-    ImVec2 pos;
-};
-
 struct Particle {
     ImVec2 pos;
     ImVec2 velocity;
@@ -94,8 +83,6 @@ private:
     
     // Win state
     bool m_isWon = false;
-    std::vector<BouncingCard> m_bouncingCards;
-    std::vector<CardTrail> m_winTrails;
     float m_winAnimTimer = 0.0f;
     std::vector<Particle> m_particles;
     void UpdateWinAnimation(ImDrawList* drawList, float scale);

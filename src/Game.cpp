@@ -124,6 +124,9 @@ void Game::LoadAvailableGames() {
             }
         }
     }
+    std::sort(m_availableGames.begin(), m_availableGames.end(), [](const std::string& a, const std::string& b) {
+        return std::filesystem::path(a).stem().string() < std::filesystem::path(b).stem().string();
+    });
 }
 
 void Game::LoadCardTextures() {
@@ -179,11 +182,8 @@ void Game::InitGame(const std::string& scriptPath) {
     m_dragCards.clear();
     m_undoStack.clear();
     m_isWon = false;
-    m_bouncingCards.clear();
-    m_winTrails.clear();
     m_particles.clear();
     m_winAnimTimer = 0.0f;
-    m_particles.clear();
 
     try {
         m_currentScriptPath = scriptPath;
@@ -381,6 +381,9 @@ void Game::UpdateAndDraw() {
                     continue;
                 }
             }
+        std::sort(previews.begin(), previews.end(), [](const GamePreview& a, const GamePreview& b) {
+            return a.name < b.name;
+        });
             previews_loaded = true;
         }
 
@@ -510,6 +513,7 @@ void Game::UpdateAndDraw() {
                 ImGui::SetCursorPos(ImVec2(start_x, cursorPos.y + preview_height + padding));
             }
         }
+        ImGui::Dummy(ImVec2(0.0f, 0.0f));
         return;
     }
     
@@ -895,8 +899,6 @@ void Game::UpdateAndDraw() {
         if (isWonFunc.valid() && isWonFunc(m_piles)) {
             m_isWon = true;
             m_winAnimTimer = 0.0f;
-            m_bouncingCards.clear();
-            m_winTrails.clear();
             
             // Spawn explosion particles!
             for (int i = 0; i < 500; ++i) {
@@ -1121,104 +1123,32 @@ void Game::UpdateWinAnimation(ImDrawList* drawList, float scale) {
     ImVec2 winSize = ImGui::GetWindowSize();
     ImVec2 winPos = ImGui::GetWindowPos();
     
-    ImVec2 boardWinPos = winPos;
-    boardWinPos.y += ImGui::GetFrameHeight();
-    
-    float minLogicalX = 999999.0f;
-    float maxLogicalX = -999999.0f;
-    for (const auto& p : m_piles) {
-        if (p.type == PileType::Invisible) continue;
-        float leftEdge = p.pos.x;
-        float rightEdge = p.pos.x + p.size.x;
-        if (p.offset.x > 0) rightEdge += 2 * p.offset.x;
-        else if (p.offset.x < 0) leftEdge += 2 * p.offset.x;
-        
-        if (leftEdge < minLogicalX) minLogicalX = leftEdge;
-        if (rightEdge > maxLogicalX) maxLogicalX = rightEdge;
-    }
-    if (minLogicalX > maxLogicalX) {
-        minLogicalX = 0.0f;
-        maxLogicalX = 1280.0f;
-    }
-    float logicalWidth = maxLogicalX - minLogicalX;
-    float boardPixelWidth = logicalWidth * scale;
-    float boardOffsetX = (ImGui::GetWindowWidth() - boardPixelWidth) * 0.5f;
-    if (boardOffsetX < 0.0f) boardOffsetX = 0.0f;
-    
-    ImVec2 boardBasePos = boardWinPos;
-    boardBasePos.x += boardOffsetX - (minLogicalX * scale);
-
     float dt = ImGui::GetIO().DeltaTime;
     
     m_winAnimTimer -= dt;
     
-    // Spawn a new bouncing card periodically from random piles
+    // Spawn a new burst of particles periodically
     if (m_winAnimTimer <= 0.0f) {
-        // Find all piles with cards
-        std::vector<int> validPiles;
-        for (size_t i = 0; i < m_piles.size(); ++i) {
-            if (!m_piles[i].cards.empty()) {
-                validPiles.push_back((int)i);
-            }
-        }
+        m_winAnimTimer = 0.1f + (rand() % 30) / 100.0f;
         
-        if (!validPiles.empty()) {
-            int foundPileIdx = validPiles[rand() % validPiles.size()];
-            Pile& p = m_piles[foundPileIdx];
-            Card c = p.cards.back();
-            p.cards.pop_back();
+        int wx = std::max(1, (int)winSize.x);
+        int wy = std::max(1, (int)(winSize.y * 0.5f));
+        ImVec2 burstPos = ImVec2(winPos.x + (rand() % wx), winPos.y + winSize.y - (rand() % wy));
             
-            BouncingCard bc;
-            bc.card = c;
-            ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
-            int drawIndex = p.cards.size(); // The position it was at
-            bc.pos = ImVec2(boardBasePos.x + p.pos.x * scale + pOffset.x * drawIndex,
-                            boardBasePos.y + p.pos.y * scale + pOffset.y * drawIndex);
-            
-            // Initial velocity: random x, up y
-            float vx = (rand() % 100 > 50 ? 1 : -1) * (200.0f + (rand() % 200)) * scale;
-            bc.velocity = ImVec2(vx, (-200.0f - (rand() % 400)) * scale);
-            
-            m_bouncingCards.push_back(bc);
-            m_winAnimTimer = 0.5f; // Wait before next card
+        for (int i = 0; i < 60; ++i) {
+            Particle p;
+            p.pos = burstPos;
+            float angle = (rand() % 360) * M_PI / 180.0f;
+            float speed = 50.0f + (rand() % 400) * scale;
+            p.velocity = ImVec2(cos(angle) * speed, sin(angle) * speed - 200.0f * scale);
+            p.life = 0.5f + (rand() % 150) / 100.0f;
+            p.size = 2.0f + (rand() % 6);
+            p.color = IM_COL32(100 + rand() % 155, 100 + rand() % 155, 100 + rand() % 155, 255);
+            m_particles.push_back(p);
         }
     }
     
-    // Draw all historic trails first so they appear behind the moving cards
-    ImVec2 pSize = ImVec2(CARD_SIZE.x * scale, CARD_SIZE.y * scale);
-    for (const auto& trail : m_winTrails) {
-        DrawCard(drawList, trail.pos, pSize, trail.card, scale, 1.0f, false);
-    }
-
-    // Update and draw bouncing cards
     float gravity = 900.0f * scale;
-    float bounceLoss = 0.8f;
-    
-    for (auto it = m_bouncingCards.begin(); it != m_bouncingCards.end(); ) {
-        BouncingCard& bc = *it;
-        
-        // Save trail
-        m_winTrails.push_back({bc.card, bc.pos});
-
-        bc.velocity.y += gravity * dt;
-        bc.pos.x += bc.velocity.x * dt;
-        bc.pos.y += bc.velocity.y * dt;
-        
-        // Bounce off bottom
-        if (bc.pos.y + pSize.y > winPos.y + winSize.y) {
-            bc.pos.y = winPos.y + winSize.y - pSize.y;
-            bc.velocity.y = -bc.velocity.y * bounceLoss;
-        }
-        
-        // If it goes completely off the sides, remove it to prevent infinite trails
-        if (bc.pos.x + pSize.x < winPos.x || bc.pos.x > winPos.x + winSize.x) {
-            it = m_bouncingCards.erase(it);
-            continue;
-        }
-        
-        DrawCard(drawList, bc.pos, pSize, bc.card, scale, 1.0f, false);
-        ++it;
-    }
 
     // Update and draw particles
     for (auto it = m_particles.begin(); it != m_particles.end(); ) {
@@ -1258,6 +1188,4 @@ void Game::Undo() {
     m_dragCardIndex = -1;
     m_dragCards.clear();
     m_isWon = false;
-    m_bouncingCards.clear();
-    m_winTrails.clear();
 }
