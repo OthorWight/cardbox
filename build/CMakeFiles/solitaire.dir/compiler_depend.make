@@ -1330,6 +1330,8 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
   /home/ben/code/sol/extern/imgui/imgui.h \
   /home/ben/code/sol/extern/imgui/imgui_internal.h \
   /home/ben/code/sol/src/Game.h \
+  /home/ben/code/sol/src/miniaudio.h \
+  /home/ben/code/sol/src/stb_vorbis.c \
   /usr/include/GL/gl.h \
   /usr/include/GL/glext.h \
   /usr/include/KHR/khrplatform.h \
@@ -1527,20 +1529,24 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
   /usr/include/c++/15/variant \
   /usr/include/c++/15/vector \
   /usr/include/ctype.h \
+  /usr/include/dlfcn.h \
   /usr/include/endian.h \
   /usr/include/errno.h \
   /usr/include/features-time64.h \
   /usr/include/features.h \
   /usr/include/libintl.h \
   /usr/include/limits.h \
+  /usr/include/linux/close_range.h \
   /usr/include/linux/errno.h \
   /usr/include/linux/limits.h \
   /usr/include/linux/posix_types.h \
   /usr/include/linux/sched/types.h \
+  /usr/include/linux/stat.h \
   /usr/include/linux/stddef.h \
   /usr/include/linux/types.h \
   /usr/include/locale.h \
   /usr/include/math.h \
+  /usr/include/poll.h \
   /usr/include/pthread.h \
   /usr/include/sched.h \
   /usr/include/stdc-predef.h \
@@ -1550,19 +1556,27 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/time.h \
+  /usr/include/unistd.h \
   /usr/include/wchar.h \
   /usr/include/wctype.h \
   /usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h \
   /usr/include/x86_64-linux-gnu/bits/byteswap.h \
+  /usr/include/x86_64-linux-gnu/bits/confname.h \
   /usr/include/x86_64-linux-gnu/bits/cpu-set.h \
+  /usr/include/x86_64-linux-gnu/bits/dl_find_object.h \
+  /usr/include/x86_64-linux-gnu/bits/dlfcn.h \
   /usr/include/x86_64-linux-gnu/bits/endian.h \
   /usr/include/x86_64-linux-gnu/bits/endianness.h \
+  /usr/include/x86_64-linux-gnu/bits/environments.h \
   /usr/include/x86_64-linux-gnu/bits/errno.h \
+  /usr/include/x86_64-linux-gnu/bits/eventfd.h \
   /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
   /usr/include/x86_64-linux-gnu/bits/floatn.h \
   /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h \
   /usr/include/x86_64-linux-gnu/bits/fp-fast.h \
   /usr/include/x86_64-linux-gnu/bits/fp-logb.h \
+  /usr/include/x86_64-linux-gnu/bits/getopt_core.h \
+  /usr/include/x86_64-linux-gnu/bits/getopt_posix.h \
   /usr/include/x86_64-linux-gnu/bits/iscanonical.h \
   /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
   /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h \
@@ -1574,14 +1588,19 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
   /usr/include/x86_64-linux-gnu/bits/mathcalls-macros.h \
   /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h \
   /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
+  /usr/include/x86_64-linux-gnu/bits/poll.h \
   /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
   /usr/include/x86_64-linux-gnu/bits/posix2_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/posix_opt.h \
   /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
   /usr/include/x86_64-linux-gnu/bits/sched.h \
   /usr/include/x86_64-linux-gnu/bits/select.h \
   /usr/include/x86_64-linux-gnu/bits/setjmp.h \
+  /usr/include/x86_64-linux-gnu/bits/stat.h \
+  /usr/include/x86_64-linux-gnu/bits/statx-generic.h \
+  /usr/include/x86_64-linux-gnu/bits/statx.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
@@ -1589,6 +1608,7 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
   /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
   /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
   /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
+  /usr/include/x86_64-linux-gnu/bits/struct_stat.h \
   /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h \
   /usr/include/x86_64-linux-gnu/bits/time.h \
   /usr/include/x86_64-linux-gnu/bits/time64.h \
@@ -1613,6 +1633,8 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
   /usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_statx.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_statx_timestamp.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h \
@@ -1622,6 +1644,7 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
   /usr/include/x86_64-linux-gnu/bits/typesizes.h \
   /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
   /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
   /usr/include/x86_64-linux-gnu/bits/waitflags.h \
   /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
@@ -1645,8 +1668,12 @@ CMakeFiles/solitaire.dir/src/Game.cpp.o: /home/ben/code/sol/src/Game.cpp \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
+  /usr/include/x86_64-linux-gnu/sys/eventfd.h \
+  /usr/include/x86_64-linux-gnu/sys/poll.h \
   /usr/include/x86_64-linux-gnu/sys/select.h \
   /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
+  /usr/include/x86_64-linux-gnu/sys/stat.h \
+  /usr/include/x86_64-linux-gnu/sys/time.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/include/adxintrin.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/include/amxavx512intrin.h \
@@ -2303,13 +2330,23 @@ CMakeFiles/solitaire.dir/extern/imgui/backends/imgui_impl_opengl3.cpp.o:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h:
 
+/usr/include/x86_64-linux-gnu/bits/types/struct_statx_timestamp.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_statx.h:
+
 /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h:
 
 /usr/include/x86_64-linux-gnu/bits/time.h:
 
+/usr/include/x86_64-linux-gnu/bits/statx.h:
+
 /usr/include/x86_64-linux-gnu/bits/sched.h:
+
+/usr/include/x86_64-linux-gnu/bits/poll.h:
+
+/usr/include/x86_64-linux-gnu/bits/eventfd.h:
 
 /usr/include/x86_64-linux-gnu/bits/cpu-set.h:
 
@@ -2320,6 +2357,8 @@ CMakeFiles/solitaire.dir/extern/imgui/backends/imgui_impl_opengl3.cpp.o:
 /usr/include/linux/types.h:
 
 /usr/include/linux/stddef.h:
+
+/usr/include/linux/stat.h:
 
 /usr/include/linux/posix_types.h:
 
@@ -2374,6 +2413,8 @@ CMakeFiles/solitaire.dir/extern/imgui/backends/imgui_impl_opengl3.cpp.o:
 /usr/include/c++/15/ext/concurrence.h:
 
 /usr/include/c++/15/ext/atomicity.h:
+
+/usr/include/c++/15/cwctype:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/include/fmaintrin.h:
 
@@ -2593,6 +2634,8 @@ _deps/sol2-src/include/sol/config.hpp:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/include/serializeintrin.h:
 
+/usr/include/x86_64-linux-gnu/sys/stat.h:
+
 /usr/include/c++/15/debug/assertions.h:
 
 /usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h:
@@ -2705,6 +2748,8 @@ _deps/sol2-src/include/sol/error_handler.hpp:
 
 /usr/include/X11/X.h:
 
+/usr/include/x86_64-linux-gnu/bits/stat.h:
+
 /usr/include/x86_64-linux-gnu/bits/waitstatus.h:
 
 /usr/include/x86_64-linux-gnu/bits/uio_lim.h:
@@ -2751,6 +2796,10 @@ _deps/sol2-src/include/sol/stack_check_get_unqualified.hpp:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/include/tmmintrin.h:
 
+/usr/include/c++/15/exception:
+
+/usr/include/c++/15/backward/binders.h:
+
 /usr/include/c++/15/bits/enable_special_members.h:
 
 /usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
@@ -2768,6 +2817,8 @@ _deps/sol2-src/include/sol/types.hpp:
 /usr/include/x86_64-linux-gnu/bits/posix2_lim.h:
 
 _deps/sol2-src/include/sol/detail/build_version.hpp:
+
+/usr/include/x86_64-linux-gnu/sys/poll.h:
 
 /usr/include/c++/15/tr1/modified_bessel_func.tcc:
 
@@ -2800,6 +2851,8 @@ _deps/sol2-src/include/sol/assert.hpp:
 /usr/include/c++/15/tr1/ell_integral.tcc:
 
 /usr/include/stdc-predef.h:
+
+/usr/include/x86_64-linux-gnu/bits/statx-generic.h:
 
 /usr/include/wchar.h:
 
@@ -2876,12 +2929,6 @@ _deps/sol2-src/include/sol/unsafe_function_result.hpp:
 /usr/include/x86_64-linux-gnu/bits/types/locale_t.h:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/include/clzerointrin.h:
-
-/usr/include/x86_64-linux-gnu/bits/timesize.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/15/include/clflushoptintrin.h:
-
-/usr/include/x86_64-linux-gnu/bits/dl_find_object.h:
 
 _deps/sol2-src/include/sol/inheritance.hpp:
 
@@ -3019,6 +3066,8 @@ _deps/sol2-src/include/sol/usertype_traits.hpp:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/include/immintrin.h:
 
+/usr/include/x86_64-linux-gnu/sys/eventfd.h:
+
 /usr/include/x86_64-linux-gnu/bits/struct_mutex.h:
 
 _deps/sol2-src/include/sol/property.hpp:
@@ -3090,6 +3139,8 @@ _deps/sol2-src/include/sol/wrapper.hpp:
 /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/wint_t.h:
+
+/usr/include/x86_64-linux-gnu/bits/struct_stat.h:
 
 /usr/include/signal.h:
 
@@ -3167,6 +3218,8 @@ _deps/sol2-src/include/sol/as_args.hpp:
 
 /usr/include/x86_64-linux-gnu/bits/types/error_t.h:
 
+/usr/include/poll.h:
+
 /usr/include/c++/15/bits/streambuf_iterator.h:
 
 _deps/sol2-src/include/sol/as_returns.hpp:
@@ -3180,6 +3233,12 @@ _deps/sol2-src/include/sol/bytecode.hpp:
 /usr/include/c++/15/algorithm:
 
 _deps/sol2-src/include/sol/compatibility.hpp:
+
+/usr/include/x86_64-linux-gnu/bits/timesize.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/15/include/clflushoptintrin.h:
+
+/home/ben/code/sol/src/stb_vorbis.c:
 
 /usr/include/c++/15/bits/basic_string.tcc:
 
@@ -3399,6 +3458,12 @@ _deps/sol2-src/include/sol/variadic_args.hpp:
 
 /home/ben/code/sol/src/Game.h:
 
+/usr/include/x86_64-linux-gnu/bits/dl_find_object.h:
+
+/home/ben/code/sol/src/miniaudio.h:
+
+/usr/include/c++/15/bits/fs_path.h:
+
 /usr/include/asm-generic/errno.h:
 
 /usr/include/asm-generic/int-ll64.h:
@@ -3457,8 +3522,6 @@ _deps/sol2-src/include/sol/tuple.hpp:
 
 /usr/include/c++/15/bits/fs_ops.h:
 
-/usr/include/c++/15/bits/fs_path.h:
-
 /usr/include/c++/15/bits/functional_hash.h:
 
 /usr/include/c++/15/bits/hashtable.h:
@@ -3474,6 +3537,8 @@ _deps/sol2-src/include/sol/tuple.hpp:
 /usr/include/c++/15/bits/locale_facets.tcc:
 
 /usr/include/c++/15/bits/locale_facets_nonio.h:
+
+/usr/include/x86_64-linux-gnu/sys/time.h:
 
 _deps/lua-src/src/lua.h:
 
@@ -3556,9 +3621,3 @@ _deps/sol2-src/include/sol/stack_core.hpp:
 /usr/include/c++/15/cstdint:
 
 /usr/include/c++/15/cwchar:
-
-/usr/include/c++/15/cwctype:
-
-/usr/include/c++/15/backward/binders.h:
-
-/usr/include/c++/15/exception:

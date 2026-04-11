@@ -15,7 +15,7 @@ function Init(piles, deck)
 
     local waste = Pile.new()
     waste.id = 1; waste.type = PileType.Waste
-    waste.pos = ImVec2.new(startX + padX + 20, startY)
+    waste.pos = ImVec2.new(startX + padX, startY)
     waste.size = ImVec2.new(100.0, 140.0)
     waste.offset = ImVec2.new(25.0, 0.0)
     piles:push_back(waste)

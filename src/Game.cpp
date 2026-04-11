@@ -292,8 +292,10 @@ void Game::UpdateAndDraw() {
     bool mouseReleased = ImGui::IsMouseReleased(0);
     bool rightClicked = ImGui::IsMouseClicked(1);
 
-    // Calculate scale based on window width (1280 is our reference width)
-    float scale = ImGui::GetWindowWidth() / 1280.0f;
+    // Calculate scale based on window size (1280x720 is our reference resolution)
+    float scaleX = ImGui::GetWindowWidth() / 1280.0f;
+    float scaleY = ImGui::GetWindowHeight() / 720.0f;
+    float scale = std::min(scaleX, scaleY);
     if (scale < 0.5f) scale = 0.5f;
 
     ImGui::GetIO().FontGlobalScale = scale;
@@ -698,6 +700,7 @@ void Game::UpdateAndDraw() {
             
             if (isClick) {
                 HandleClick(m_dragSourcePile);
+            } else {
             }
         }
         
