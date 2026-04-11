@@ -10,7 +10,7 @@ function Init(piles, deck)
     -- 0: Stock
     local stock = Pile.new()
     stock.id = 0; stock.type = PileType.Stock
-    stock.pos = ImVec2.new(220, startY)
+    stock.pos = ImVec2.new(100, startY)
     stock.size = ImVec2.new(100.0, 140.0)
     stock.offset = ImVec2.new(0.2, -0.5)
     piles:push_back(stock)
@@ -18,7 +18,7 @@ function Init(piles, deck)
     -- 1: Waste
     local waste = Pile.new()
     waste.id = 1; waste.type = PileType.Waste
-    waste.pos = ImVec2.new(220 + 120, startY)
+    waste.pos = ImVec2.new(100 + 120, startY)
     waste.size = ImVec2.new(100.0, 140.0)
     waste.offset = ImVec2.new(20.0, 0.0)
     piles:push_back(waste)
@@ -48,7 +48,7 @@ function Init(piles, deck)
     -- 30: Foundation (discard pile)
     local found = Pile.new()
     found.id = 30; found.type = PileType.Foundation
-    found.pos = ImVec2.new(1000 - 120, startY)
+    found.pos = ImVec2.new(1100 - 120, startY)
     found.size = ImVec2.new(100.0, 140.0)
     found.offset = ImVec2.new(0.0, 0.0)
     piles:push_back(found)
