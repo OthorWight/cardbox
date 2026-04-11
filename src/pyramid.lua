@@ -144,3 +144,10 @@ end
 function AutoSolve(piles)
     return {}
 end
+
+function IsWon(piles)
+    for i = 2, 29 do
+        if not piles:get(i).cards:empty() then return false end
+    end
+    return true
+end
