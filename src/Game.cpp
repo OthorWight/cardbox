@@ -354,7 +354,7 @@ void Game::UpdateAndDraw() {
             ImGui::Separator();
             for (const auto& gamePath : m_availableGames) {
                 std::string displayName = std::filesystem::path(gamePath).stem().string();
-                if (ImGui::MenuItem(("New " + displayName).c_str())) {
+                if (ImGui::MenuItem(("Play " + displayName).c_str())) {
                     InitGame(gamePath);
                 }
             }
