@@ -1,6 +1,7 @@
 GameName = "Spider"
 HelpText = "Build 8 sequences of Spades from King to Ace.\nCompleted sequences automatically move to the foundations."
 NumDecks = 2
+AutoCenter = true
 
 function Init(piles, deck)
     -- 0 to 7: Foundations

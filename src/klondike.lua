@@ -1,5 +1,6 @@
 GameName = "Klondike"
 NumDecks = 1
+AutoCenter = true
 HelpText = "Move all 52 cards to the four foundation piles at the top right.\nFoundations are built up by suit, from Ace to King.\nTableau piles can be built down by alternating colors.\nClick the stock pile (top left) to deal more cards."
 
 function Init(piles, deck)

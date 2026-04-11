@@ -1,5 +1,6 @@
 GameName = "Pyramid"
 NumDecks = 1
+AutoCenter = true
 HelpText = "Clear the pyramid by matching pairs of cards that sum to 13.\nKings are worth 13 and can be removed individually.\nQueens=12, Jacks=11, Aces=1.\nDrag a card onto another to pair them.\nRight-click a King to remove it.\nClick the Stock to deal cards."
 
 function Init(piles, deck)

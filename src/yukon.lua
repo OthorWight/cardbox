@@ -1,6 +1,7 @@
 GameName = "Yukon"
 HelpText = "Build the four foundations up in suit from Ace to King.\nMove any face-up group of cards, regardless of sequence, as long as the top card matches the target in alternating color and descending rank. Only Kings can go on empty tableaus."
 NumDecks = 1
+AutoCenter = true
 
 function Init(piles, deck)
     -- 0-3: Foundations

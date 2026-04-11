@@ -1,5 +1,6 @@
 GameName = "Golf"
 NumDecks = 1
+AutoCenter = true
 HelpText = "Clear the 7 tableaus by moving cards to the waste pile.\nCards can be moved if they are exactly one rank higher or lower than the top waste card.\nWrapping between King and Ace is allowed.\nClick the stock to draw a new card."
 
 function Init(piles, deck)

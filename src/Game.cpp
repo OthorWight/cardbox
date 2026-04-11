@@ -32,10 +32,14 @@ struct GamePreview {
     std::string path;
     std::string name;
     std::vector<Pile> piles;
+    bool autoCenter = true;
 };
 static std::vector<GamePreview> s_previews;
 static bool s_previews_loaded = false;
 static float s_deal_delay = 0.0f;
+
+static float s_boardScale = 1.0f;
+static ImVec2 s_boardBasePos(0.0f, 0.0f);
 
 Game::Game() {
     SetupLuaBindings();
@@ -95,6 +99,15 @@ void Game::SetupLuaBindings() {
         "push_back", [](std::vector<Pile>& v, const Pile& p) { v.push_back(p); },
         "get", [](std::vector<Pile>& v, int i) -> Pile& { return v[i]; }
     );
+
+    // Expose a text drawing function to Lua
+    m_lua.set_function("DrawBoardText", [](float x, float y, const std::string& text) {
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        ImVec2 pos(s_boardBasePos.x + x * s_boardScale, s_boardBasePos.y + y * s_boardScale);
+        float fontSize = 24.0f * s_boardScale; // Scale the font size naturally with the board
+        drawList->AddText(ImGui::GetFont(), fontSize, ImVec2(pos.x + 2.0f, pos.y + 2.0f), IM_COL32(0, 0, 0, 200), text.c_str()); // Drop shadow
+        drawList->AddText(ImGui::GetFont(), fontSize, pos, IM_COL32(255, 255, 255, 255), text.c_str()); // White text
+    });
 }
 
 void Game::CreateDeck(std::vector<Card>& deck, int numDecks) {
@@ -199,6 +212,20 @@ void Game::InitGame(const std::string& scriptPath) {
     s_previews_loaded = false;
 
     try {
+        // Clear Lua globals to prevent leaking state between games
+        m_lua["GameName"] = sol::lua_nil;
+        m_lua["HelpText"] = sol::lua_nil;
+        m_lua["NumDecks"] = sol::lua_nil;
+        m_lua["AutoCenter"] = sol::lua_nil;
+        m_lua["Init"] = sol::lua_nil;
+        m_lua["CanPickup"] = sol::lua_nil;
+        m_lua["CanDrop"] = sol::lua_nil;
+        m_lua["AfterMove"] = sol::lua_nil;
+        m_lua["HandleClick"] = sol::lua_nil;
+        m_lua["AutoSolve"] = sol::lua_nil;
+        m_lua["IsWon"] = sol::lua_nil;
+        m_lua["Draw"] = sol::lua_nil;
+
         m_lua.script_file(m_currentScriptPath);
         m_currentGameName = m_lua["GameName"].get_or<std::string>("Unknown Game");
         m_currentHelpText = m_lua["HelpText"].get_or<std::string>("No help available.");
@@ -373,8 +400,15 @@ void Game::UpdateAndDraw() {
                 GamePreview p;
                 p.path = path;
                 try {
+                    // Prevent leaking state from previously evaluated scripts
+                    m_lua["GameName"] = sol::lua_nil;
+                    m_lua["AutoCenter"] = sol::lua_nil;
+                    m_lua["NumDecks"] = sol::lua_nil;
+                    m_lua["Init"] = sol::lua_nil;
+
                     m_lua.script_file(path);
                     p.name = m_lua["GameName"].get_or<std::string>("Unknown");
+                    p.autoCenter = m_lua["AutoCenter"].get_or(true);
                     std::vector<Card> deck;
                     CreateDeck(deck, m_lua["NumDecks"].get_or(1));
                     ShuffleDeck(deck);
@@ -474,7 +508,12 @@ void Game::UpdateAndDraw() {
             float availH = preview_height - 40.0f * scale;
             float bOffsetY = 40.0f * scale + std::max(0.0f, (availH - contentH) * 0.5f);
 
-            ImVec2 boardOffset = ImVec2(screenPos.x + bOffsetX - minLogX * mini_scale, screenPos.y + bOffsetY - minLogY * mini_scale);
+            ImVec2 boardOffset;
+            if (preview.autoCenter) {
+                boardOffset = ImVec2(screenPos.x + bOffsetX - minLogX * mini_scale, screenPos.y + bOffsetY - minLogY * mini_scale);
+            } else {
+                boardOffset = ImVec2(screenPos.x, screenPos.y + 40.0f * scale);
+            }
 
 
             int cardsInitializedThisFrame = 0;
@@ -598,7 +637,13 @@ void Game::UpdateAndDraw() {
     if (boardOffsetX < 0.0f) boardOffsetX = 0.0f;
     
     ImVec2 boardBasePos = winPos;
-    boardBasePos.x += boardOffsetX - (minLogicalX * scale);
+    bool autoCenter = m_lua["AutoCenter"].get_or(true);
+    if (autoCenter) {
+        boardBasePos.x += boardOffsetX - (minLogicalX * scale);
+    }
+
+    s_boardScale = scale;
+    s_boardBasePos = boardBasePos;
 
     // Interaction vars
     int hoveredPile = -1;
@@ -929,6 +974,12 @@ void Game::UpdateAndDraw() {
                 DrawCard(drawList, cardPos, pSize, m_dragCards[c], scale, 1.0f, true);
             }
         }
+    }
+
+    // Give the Lua script a chance to draw text over the board
+    sol::protected_function drawFunc = m_lua["Draw"];
+    if (drawFunc.valid()) {
+        drawFunc();
     }
 
     // Check Win Condition (Only trigger once cards finish flying)

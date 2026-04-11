@@ -1,6 +1,7 @@
 GameName = "FreeCell"
 HelpText = "Build the four foundations up in suit from Ace to King.\nCards on the tableau are built down by alternating color.\nUse the four free cells to temporarily store single cards."
 NumDecks = 1
+AutoCenter = true
 
 function Init(piles, deck)
     -- 0-3: Free cells (Top Left)
