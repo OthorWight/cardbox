@@ -500,21 +500,23 @@ void Game::UpdateAndDraw() {
                                     break;
                                 }
                             }
-                            c.animPos = startPos;
+                        c.animPos = ImVec2(startPos.x - screenPos.x, startPos.y - screenPos.y);
                             c.hasInitializedPos = true;
                             cardsInitializedThisFrame++;
                         } else {
                             continue;
                         }
                     } else {
-                        c.animPos.x += (cPos.x - c.animPos.x) * animSpeed;
-                        c.animPos.y += (cPos.y - c.animPos.y) * animSpeed;
+                    ImVec2 targetRel = ImVec2(cPos.x - screenPos.x, cPos.y - screenPos.y);
+                    c.animPos.x += (targetRel.x - c.animPos.x) * animSpeed;
+                    c.animPos.y += (targetRel.y - c.animPos.y) * animSpeed;
                     }
 
+                ImVec2 drawPos = ImVec2(screenPos.x + c.animPos.x, screenPos.y + c.animPos.y);
                     if (c.faceUp) {
-                        DrawCard(drawList, c.animPos, pSize, c, mini_scale, 1.0f, false, false);
+                    DrawCard(drawList, drawPos, pSize, c, mini_scale, 1.0f, false, false);
                     } else {
-                        DrawCardBack(drawList, c.animPos, pSize, mini_scale, 1.0f, false);
+                    DrawCardBack(drawList, drawPos, pSize, mini_scale, 1.0f, false);
                     }
                     cCount++;
                 }
