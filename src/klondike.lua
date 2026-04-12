@@ -8,14 +8,16 @@ function Init(piles, deck)
     local padX = 100.0 + 20.0
 
     local stock = Pile.new()
-    stock.id = 0; stock.type = PileType.Stock
+    stock.id = 0
+    stock.type = PileType.Stock
     stock.pos = ImVec2.new(startX, startY)
     stock.size = ImVec2.new(100.0, 140.0)
     stock.offset = ImVec2.new(0.2, -0.5)
     piles:push_back(stock)
 
     local waste = Pile.new()
-    waste.id = 1; waste.type = PileType.Waste
+    waste.id = 1
+    waste.type = PileType.Waste
     waste.pos = ImVec2.new(startX + padX, startY)
     waste.size = ImVec2.new(100.0, 140.0)
     waste.offset = ImVec2.new(25.0, 0.0)
@@ -23,7 +25,8 @@ function Init(piles, deck)
 
     for i = 0, 3 do
         local found = Pile.new()
-        found.id = 2 + i; found.type = PileType.Foundation
+        found.id = 2 + i
+        found.type = PileType.Foundation
         found.pos = ImVec2.new(startX + padX * (3 + i), startY)
         found.size = ImVec2.new(100.0, 140.0)
         found.offset = ImVec2.new(0.0, 0.0)
@@ -32,7 +35,8 @@ function Init(piles, deck)
 
     for i = 0, 6 do
         local tab = Pile.new()
-        tab.id = 6 + i; tab.type = PileType.Tableau
+        tab.id = 6 + i
+        tab.type = PileType.Tableau
         tab.pos = ImVec2.new(startX + padX * i, startY + 140.0 + 60.0)
         tab.size = ImVec2.new(100.0, 140.0)
         tab.offset = ImVec2.new(0.0, 25.0)
