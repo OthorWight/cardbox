@@ -143,6 +143,25 @@ function HandleClick(piles, pileIdx)
 end
 
 function AutoSolve(piles)
+    -- Auto-remove Kings from the Waste pile
+    -- local waste = piles:get(1)
+    -- if not waste.cards:empty() then
+    --     local c = waste.cards:back()
+    --     if c.rank == 13 then
+    --         return {1, 30, waste.cards:size() - 1}
+    --     end
+    -- end
+
+    -- Auto-remove Kings from exposed Pyramid cards
+    for i = 2, 29 do
+        local p = piles:get(i)
+        if not p.cards:empty() and not IsBlocked(piles, i) then
+            if p.cards:back().rank == 13 then
+                return {i, 30, p.cards:size() - 1}
+            end
+        end
+    end
+
     return {}
 end
 

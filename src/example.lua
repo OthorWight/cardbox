@@ -1,5 +1,5 @@
 -- Global variables expected by the C++ engine
-GameName = "API Example"
+GameName = "zAPI Example"
 NumDecks = 1
 AutoCenter = false
 HelpText = "This is a dummy game demonstrating all available Lua API bindings.\nMove all cards out of the first pile to trigger the win fireworks!"

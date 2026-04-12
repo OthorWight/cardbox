@@ -352,6 +352,12 @@ void Game::UpdateAndDraw() {
             if (ImGui::MenuItem("Undo", "Ctrl+Z", false, hasGame && !m_undoStack.empty())) doUndo = true;
             if (ImGui::MenuItem("Restart Game", "F2", false, hasGame)) InitGame(m_currentScriptPath);
             ImGui::Separator();
+            if (ImGui::MenuItem("Refresh Game List")) {
+                LoadAvailableGames();
+                s_previews.clear();
+                s_previews_loaded = false;
+            }
+            ImGui::Separator();
             for (const auto& gamePath : m_availableGames) {
                 std::string displayName = std::filesystem::path(gamePath).stem().string();
                 if (ImGui::MenuItem(("Play " + displayName).c_str())) {
@@ -396,6 +402,7 @@ void Game::UpdateAndDraw() {
 
     if (!hasGame) {
         if (!s_previews_loaded) {
+            s_previews.clear(); // Ensure we don't duplicate previews when refreshing
             for (const auto& path : m_availableGames) {
                 GamePreview p;
                 p.path = path;
