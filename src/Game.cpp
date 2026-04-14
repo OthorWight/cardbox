@@ -108,6 +108,17 @@ void Game::SetupLuaBindings() {
         drawList->AddText(ImGui::GetFont(), fontSize, ImVec2(pos.x + 2.0f, pos.y + 2.0f), IM_COL32(0, 0, 0, 200), text.c_str()); // Drop shadow
         drawList->AddText(ImGui::GetFont(), fontSize, pos, IM_COL32(255, 255, 255, 255), text.c_str()); // White text
     });
+
+    m_lua.set_function("DrawBoardButton", [](float x, float y, float w, float h, const std::string& label) {
+        ImVec2 pos(s_boardBasePos.x + x * s_boardScale, s_boardBasePos.y + y * s_boardScale);
+        ImGui::SetCursorScreenPos(pos);
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+        ImGui::SetWindowFontScale(s_boardScale);
+        bool clicked = ImGui::Button(label.c_str(), ImVec2(w * s_boardScale, h * s_boardScale));
+        ImGui::SetWindowFontScale(1.0f);
+        ImGui::PopFont();
+        return clicked;
+    });
 }
 
 void Game::CreateDeck(std::vector<Card>& deck, int numDecks) {

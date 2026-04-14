@@ -1,4 +1,4 @@
-GameName = "Tower of Hanoi"
+GameName = "Hanoi"
 NumDecks = 1
 AutoCenter = false
 HelpText = "A classic puzzle! Move all disks from Peg 1 to Peg 3.\nRules:\n1. Move only one card at a time.\n2. A higher rank card cannot be placed on top of a lower rank card."
