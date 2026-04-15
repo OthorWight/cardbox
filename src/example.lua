@@ -4,6 +4,8 @@ NumDecks = 1
 AutoCenter = false
 HelpText = "This is a dummy game demonstrating all available Lua API bindings.\nMove all cards out of the first pile to trigger the win fireworks!"
 
+ButtonClickCount = 0
+
 -- Init is called once when the game starts or restarts.
 -- @param piles: A VectorPile object (std::vector<Pile> in C++)
 -- @param deck: A VectorCard object (std::vector<Card> in C++) containing the shuffled deck
@@ -168,4 +170,9 @@ function Draw()
     DrawBoardText(300.0, 10.0, "Foundation")
     
     DrawBoardText(20.0, 520.0, "Move all cards from the Tableau to the Foundation to see the fireworks!")
+
+    -- DrawBoardButton returns true when clicked
+    if DrawBoardButton(20.0, 560.0, 200.0, 40.0, "Click Me! (" .. ButtonClickCount .. ")") then
+        ButtonClickCount = ButtonClickCount + 1
+    end
 end

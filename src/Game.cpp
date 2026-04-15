@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <cstdlib>
 #include <filesystem>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -41,6 +42,46 @@ static float s_deal_delay = 0.0f;
 static float s_boardScale = 1.0f;
 static ImVec2 s_boardBasePos(0.0f, 0.0f);
 
+static size_t s_lua_allocated_memory = 0;
+static const size_t MAX_LUA_MEMORY = 10 * 1024 * 1024; // 10 MB memory limit
+
+static void* LuaMemoryAllocator(void* ud, void* ptr, size_t osize, size_t nsize) {
+    size_t* total_allocated = static_cast<size_t*>(ud);
+
+    if (nsize == 0) {
+        if (ptr != nullptr) {
+            if (*total_allocated >= osize) {
+                *total_allocated -= osize;
+            } else {
+                *total_allocated = 0; // Prevent underflow if freeing pre-allocated memory
+            }
+            std::free(ptr);
+        }
+        return nullptr;
+    }
+
+    size_t new_total = *total_allocated;
+    if (ptr != nullptr) {
+        if (new_total >= osize) {
+            new_total -= osize;
+        } else {
+            new_total = 0;
+        }
+    }
+    new_total += nsize;
+
+    if (new_total > MAX_LUA_MEMORY) {
+        std::cerr << "Lua memory limit exceeded (" << MAX_LUA_MEMORY << " bytes)!" << std::endl;
+        return nullptr; // Returning nullptr triggers a Lua memory error
+    }
+
+    void* new_ptr = std::realloc(ptr, nsize);
+    if (new_ptr) {
+        *total_allocated = new_total;
+    }
+    return new_ptr;
+}
+
 Game::Game() {
     SetupLuaBindings();
     LoadCardTextures();
@@ -48,7 +89,19 @@ Game::Game() {
 }
 
 void Game::SetupLuaBindings() {
+    // Initialize memory tracking based on what sol2 already allocated before we hijack the allocator
+    int kb = lua_gc(m_lua.lua_state(), LUA_GCCOUNT, 0);
+    int bytes = lua_gc(m_lua.lua_state(), LUA_GCCOUNTB, 0);
+    s_lua_allocated_memory = (kb * 1024) + bytes;
+    
+    lua_setallocf(m_lua.lua_state(), LuaMemoryAllocator, &s_lua_allocated_memory);
+
     m_lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::table, sol::lib::string);
+
+    // Prevent infinite loops by aborting if a script executes too many instructions
+    lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) {
+        luaL_error(L, "Script execution limit exceeded! Possible infinite loop.");
+    }, LUA_MASKCOUNT, 1000000);
 
     m_lua.new_usertype<ImVec2>("ImVec2",
         sol::constructors<ImVec2(), ImVec2(float, float)>(),
@@ -533,6 +586,7 @@ void Game::UpdateAndDraw() {
                 boardOffset = ImVec2(screenPos.x, screenPos.y + 40.0f * scale);
             }
 
+            drawList->PushClipRect(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), true);
 
             int cardsInitializedThisFrame = 0;
             for (auto& p : preview.piles) {
@@ -578,6 +632,8 @@ void Game::UpdateAndDraw() {
                     cCount++;
                 }
             }
+
+            drawList->PopClipRect();
 
             // Draw title text on top with a black outline
             float outline = 1.5f * scale;
