@@ -98,11 +98,6 @@ void Game::SetupLuaBindings() {
 
     m_lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::table, sol::lib::string);
 
-    // Prevent infinite loops by aborting if a script executes too many instructions
-    lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) {
-        luaL_error(L, "Script execution limit exceeded! Possible infinite loop.");
-    }, LUA_MASKCOUNT, 1000000);
-
     m_lua.new_usertype<ImVec2>("ImVec2",
         sol::constructors<ImVec2(), ImVec2(float, float)>(),
         "x", &ImVec2::x, "y", &ImVec2::y
@@ -290,6 +285,7 @@ void Game::InitGame(const std::string& scriptPath) {
         m_lua["IsWon"] = sol::lua_nil;
         m_lua["Draw"] = sol::lua_nil;
 
+        lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
         m_lua.script_file(m_currentScriptPath);
         m_currentGameName = m_lua["GameName"].get_or<std::string>("Unknown Game");
         m_currentHelpText = m_lua["HelpText"].get_or<std::string>("No help available.");
@@ -301,9 +297,12 @@ void Game::InitGame(const std::string& scriptPath) {
 
         sol::protected_function initFunc = m_lua["Init"];
         if (initFunc.valid()) {
-            initFunc(m_piles, deck);
+            sol::protected_function_result result = initFunc(m_piles, deck);
+            if (!result.valid()) { sol::error err = result; throw err; }
         }
+        lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
     } catch (const sol::error& e) {
+        lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
         std::cerr << "Lua Error during InitGame: " << e.what() << std::endl;
     }
 }
@@ -318,7 +317,19 @@ bool Game::CanPickup(int pileIdx, int cardIdx) {
 
     sol::protected_function canPickup = m_lua["CanPickup"];
     if (canPickup.valid()) {
-        return canPickup(m_piles, pileIdx, cardIdx);
+        try {
+            lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+            sol::protected_function_result result = canPickup(m_piles, pileIdx, cardIdx);
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+            if (result.valid() && result.get_type() == sol::type::boolean) {
+                return result.get<bool>();
+            } else if (!result.valid()) {
+                sol::error err = result; throw err;
+            }
+        } catch (const sol::error& e) {
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+            std::cerr << "Lua Error in CanPickup: " << e.what() << std::endl;
+        }
     }
     return false;
 }
@@ -329,7 +340,19 @@ bool Game::CanDrop(int sourcePileIdx, const std::vector<Card>& cards, int target
     
     sol::protected_function canDrop = m_lua["CanDrop"];
     if (canDrop.valid()) {
-        return canDrop(m_piles, sourcePileIdx, targetPileIdx, cards);
+        try {
+            lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+            sol::protected_function_result result = canDrop(m_piles, sourcePileIdx, targetPileIdx, cards);
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+            if (result.valid() && result.get_type() == sol::type::boolean) {
+                return result.get<bool>();
+            } else if (!result.valid()) {
+                sol::error err = result; throw err;
+            }
+        } catch (const sol::error& e) {
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+            std::cerr << "Lua Error in CanDrop: " << e.what() << std::endl;
+        }
     }
     return false;
 }
@@ -344,7 +367,15 @@ void Game::DoMove(int sourcePileIdx, int targetPileIdx, int cardIdx) {
 
     sol::protected_function afterMove = m_lua["AfterMove"];
     if (afterMove.valid()) {
-        afterMove(m_piles, sourcePileIdx, targetPileIdx, cardIdx);
+        try {
+            lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+            sol::protected_function_result result = afterMove(m_piles, sourcePileIdx, targetPileIdx, cardIdx);
+            if (!result.valid()) { sol::error err = result; throw err; }
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+        } catch (const sol::error& e) {
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+            std::cerr << "Lua Error in AfterMove: " << e.what() << std::endl;
+        }
     }
 }
 
@@ -356,7 +387,15 @@ void Game::HandleClick(int pileIdx) {
     
     sol::protected_function handleClick = m_lua["HandleClick"];
     if (handleClick.valid()) {
-        handleClick(m_piles, pileIdx);
+        try {
+            lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+            sol::protected_function_result result = handleClick(m_piles, pileIdx);
+            if (!result.valid()) { sol::error err = result; throw err; }
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+        } catch (const sol::error& e) {
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+            std::cerr << "Lua Error in HandleClick: " << e.what() << std::endl;
+        }
         
         // Automatically save to undo stack if the Lua script changed the board state
         bool changed = false;
@@ -477,6 +516,7 @@ void Game::UpdateAndDraw() {
                     m_lua["NumDecks"] = sol::lua_nil;
                     m_lua["Init"] = sol::lua_nil;
 
+                    lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
                     m_lua.script_file(path);
                     p.name = m_lua["GameName"].get_or<std::string>("Unknown");
                     p.autoCenter = m_lua["AutoCenter"].get_or(true);
@@ -485,10 +525,16 @@ void Game::UpdateAndDraw() {
                     ShuffleDeck(deck);
                     sol::protected_function initFunc = m_lua["Init"];
                     if (initFunc.valid()) {
-                        initFunc(p.piles, deck);
+                        sol::protected_function_result result = initFunc(p.piles, deck);
+                        if (!result.valid()) { sol::error err = result; throw err; }
                     }
+                    lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
                     s_previews.push_back(p);
+                } catch (const sol::error& e) {
+                    lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+                    std::cerr << "Lua Error loading preview for " << path << ": " << e.what() << std::endl;
                 } catch (...) {
+                    lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
                     continue;
                 }
             }
@@ -895,16 +941,27 @@ void Game::UpdateAndDraw() {
     if (m_dragSourcePile == -1) {
         sol::protected_function autoSolve = m_lua["AutoSolve"];
         if (autoSolve.valid()) {
-            sol::protected_function_result result = autoSolve(m_piles);
-            if (result.valid() && result.get_type() == sol::type::table) {
-                sol::table move = result;
-                if (!move.empty()) {
-                    int src = move[1];
-                    int dst = move[2];
-                    int idx = move[3];
-                    // Do not SaveStateForUndo() here to avoid flooding the undo stack with single auto-moves
-                    DoMove(src, dst, idx);
+            
+            try {
+                lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+                sol::protected_function_result result = autoSolve(m_piles);
+                lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+                
+                if (result.valid() && result.get_type() == sol::type::table) {
+                    sol::table move = result;
+                    if (!move.empty()) {
+                        int src = move[1];
+                        int dst = move[2];
+                        int idx = move[3];
+                        // Do not SaveStateForUndo() here to avoid flooding the undo stack with single auto-moves
+                        DoMove(src, dst, idx);
+                    }
+                } else if (!result.valid()) {
+                    sol::error err = result; throw err;
                 }
+            } catch (const sol::error& e) {
+                lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+                std::cerr << "Lua Error in AutoSolve: " << e.what() << std::endl;
             }
         }
     }
@@ -919,6 +976,13 @@ void Game::UpdateAndDraw() {
         float animSpeed = 15.0f * dt;
         if (animSpeed > 1.0f) animSpeed = 1.0f;
         float flipSpeed = 10.0f * dt;
+
+        struct AnimCard {
+            Card* card;
+            ImVec2 size;
+            bool isHovered;
+        };
+        std::vector<AnimCard> deferredCards;
 
         for (size_t i = 0; i < m_piles.size(); ++i) {
             Pile& p = m_piles[i];
@@ -979,12 +1043,26 @@ void Game::UpdateAndDraw() {
                         cardsAnimating = true;
                     }
 
-                    if (cardRef.flipVisual > 0.0f) {
-                        DrawCard(drawList, cardRef.animPos, pSize, cardRef, scale, cardRef.flipVisual, false, hoveredPile == (int)i && hoveredCard == (int)c);
+                    bool isMoving = (std::abs(cardRef.animPos.x - cardPos.x) > 1.0f || std::abs(cardRef.animPos.y - cardPos.y) > 1.0f);
+                    
+                    if (isMoving) {
+                        deferredCards.push_back({&cardRef, pSize, hoveredPile == (int)i && hoveredCard == (int)c});
                     } else {
-                        DrawCardBack(drawList, cardRef.animPos, pSize, scale, -cardRef.flipVisual);
+                        if (cardRef.flipVisual > 0.0f) {
+                            DrawCard(drawList, cardRef.animPos, pSize, cardRef, scale, cardRef.flipVisual, false, hoveredPile == (int)i && hoveredCard == (int)c);
+                        } else {
+                            DrawCardBack(drawList, cardRef.animPos, pSize, scale, -cardRef.flipVisual);
+                        }
                     }
                 }
+            }
+        }
+
+        for (const auto& dc : deferredCards) {
+            if (dc.card->flipVisual > 0.0f) {
+                DrawCard(drawList, dc.card->animPos, dc.size, *dc.card, scale, dc.card->flipVisual, false, dc.isHovered);
+            } else {
+                DrawCardBack(drawList, dc.card->animPos, dc.size, scale, -dc.card->flipVisual);
             }
         }
 
@@ -1053,27 +1131,48 @@ void Game::UpdateAndDraw() {
     // Give the Lua script a chance to draw text over the board
     sol::protected_function drawFunc = m_lua["Draw"];
     if (drawFunc.valid()) {
-        drawFunc();
+        try {
+            lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+            sol::protected_function_result result = drawFunc();
+            if (!result.valid()) { sol::error err = result; throw err; }
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+        } catch (const sol::error& e) {
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+            std::cerr << "Lua Error in Draw: " << e.what() << std::endl;
+        }
     }
 
     // Check Win Condition (Only trigger once cards finish flying)
     if (!m_isWon && !cardsAnimating) {
         sol::protected_function isWonFunc = m_lua["IsWon"];
-        if (isWonFunc.valid() && isWonFunc(m_piles)) {
-            m_isWon = true;
-            m_winAnimTimer = 0.0f;
-            
-            // Spawn explosion particles!
-            for (int i = 0; i < 500; ++i) {
-                Particle p;
-                p.pos = mousePos;
-                float angle = (rand() % 360) * M_PI / 180.0f;
-                float speed = 100.0f + (rand() % 600);
-                p.velocity = ImVec2(cos(angle) * speed, sin(angle) * speed - 300.0f);
-                p.life = 1.0f + (rand() % 200) / 100.0f;
-                p.size = 2.0f + (rand() % 6);
-                p.color = IM_COL32(100 + rand() % 155, 100 + rand() % 155, 100 + rand() % 155, 255);
-                m_particles.push_back(p);
+        if (isWonFunc.valid()) {
+            try {
+                lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+                sol::protected_function_result result = isWonFunc(m_piles);
+                lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+                
+                if (result.valid() && result.get_type() == sol::type::boolean && result.get<bool>()) {
+                    m_isWon = true;
+                    m_winAnimTimer = 0.0f;
+                    
+                    // Spawn explosion particles!
+                    for (int i = 0; i < 500; ++i) {
+                        Particle p;
+                        p.pos = mousePos;
+                        float angle = (rand() % 360) * M_PI / 180.0f;
+                        float speed = 100.0f + (rand() % 600);
+                        p.velocity = ImVec2(cos(angle) * speed, sin(angle) * speed - 300.0f);
+                        p.life = 1.0f + (rand() % 200) / 100.0f;
+                        p.size = 2.0f + (rand() % 6);
+                        p.color = IM_COL32(100 + rand() % 155, 100 + rand() % 155, 100 + rand() % 155, 255);
+                        m_particles.push_back(p);
+                    }
+                } else if (!result.valid()) {
+                    sol::error err = result; throw err;
+                }
+            } catch (const sol::error& e) {
+                lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+                std::cerr << "Lua Error in IsWon: " << e.what() << std::endl;
             }
         }
     }

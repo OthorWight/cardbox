@@ -47,10 +47,13 @@ function Init(piles, deck)
 end
 
 function CanPickup(piles, pileIdx, cardIdx)
-    if pileIdx < 4 then return false end
     local p = piles:get(pileIdx)
     if p.cards:empty() then return false end
     
+    if p.type == PileType.Foundation then
+        return cardIdx == p.cards:size() - 1
+    end
+
     -- In Yukon, you can grab literally any face up card and its children!
     local c = p.cards:get(cardIdx)
     return c.faceUp
@@ -97,6 +100,32 @@ function IsWon(piles)
 end
 
 function AutoSolve(piles)
+    local readyToAutoSolve = true
+    for i = 4, 10 do
+        local p = piles:get(i)
+        if not p.cards:empty() then
+            for j = 0, p.cards:size() - 1 do
+                if not p.cards:get(j).faceUp then
+                    readyToAutoSolve = false
+                    break
+                end
+                if j < p.cards:size() - 1 then
+                    local c1 = p.cards:get(j)
+                    local c2 = p.cards:get(j + 1)
+                    if c1:IsRed() == c2:IsRed() or c1.rank - 1 ~= c2.rank then
+                        readyToAutoSolve = false
+                        break
+                    end
+                end
+            end
+        end
+        if not readyToAutoSolve then break end
+    end
+
+    if not readyToAutoSolve then
+        return {}
+    end
+
     for i = 4, 10 do
         local p = piles:get(i)
         if not p.cards:empty() then
