@@ -98,6 +98,16 @@ void Game::SetupLuaBindings() {
 
     m_lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::table, sol::lib::string);
 
+    // Secure the sandbox by removing dangerous base library functions
+    const char* dangerous_globals[] = {
+        "load", "loadstring", "loadfile", "dofile", // Fixes 7 & 12: Dynamic code eval & Bytecode
+        "getfenv", "setfenv", "_G",                 // Fixes 8: Global Environment Access
+        "getmetatable", "setmetatable"              // Fixes 9: Metatable Poisoning
+    };
+    for (const char* global : dangerous_globals) {
+        m_lua[global] = sol::lua_nil;
+    }
+
     m_lua.new_usertype<ImVec2>("ImVec2",
         sol::constructors<ImVec2(), ImVec2(float, float)>(),
         "x", &ImVec2::x, "y", &ImVec2::y
@@ -993,6 +1003,7 @@ void Game::UpdateAndDraw() {
             if (p.cards.empty()) {
                 DrawEmptyPile(drawList, basePos, pSize, scale, p.type);
             } else {
+                bool deferRemaining = false;
                 // Draw cards
                 for (size_t c = 0; c < p.cards.size(); ++c) {
                     // Skip drawing dragged cards in their original pile
@@ -1044,8 +1055,11 @@ void Game::UpdateAndDraw() {
                     }
 
                     bool isMoving = (std::abs(cardRef.animPos.x - cardPos.x) > 1.0f || std::abs(cardRef.animPos.y - cardPos.y) > 1.0f);
-                    
                     if (isMoving) {
+                        deferRemaining = true;
+                    }
+                    
+                    if (deferRemaining) {
                         deferredCards.push_back({&cardRef, pSize, hoveredPile == (int)i && hoveredCard == (int)c});
                     } else {
                         if (cardRef.flipVisual > 0.0f) {
