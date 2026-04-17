@@ -82,6 +82,10 @@ private:
     std::string m_currentHelpText;
     std::string m_currentScriptPath;
     
+    // Configuration
+    ImVec2 m_cardSize = ImVec2(100.0f, 140.0f);
+    float m_cornerRadius = 8.0f;
+    
     // Win state
     bool m_isWon = false;
     float m_winAnimTimer = 0.0f;
@@ -127,8 +131,8 @@ private:
     void LoadCardTextures();
 
     // Rendering
-    void DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, const Card& card, float scale, float widthScale = 1.0f, bool isDragged = false, bool isHovered = false);
-    void DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, float widthScale = 1.0f, bool isDragged = false);
-    void DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, PileType type);
+    void DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, const Card& card, float scale, float cornerRadius, float widthScale = 1.0f, bool isDragged = false, bool isHovered = false);
+    void DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, float cornerRadius, float widthScale = 1.0f, bool isDragged = false);
+    void DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, PileType type, float cornerRadius);
     void DrawSuit(ImDrawList* drawList, const ImVec2& center, float size, Suit suit, ImU32 color);
 };

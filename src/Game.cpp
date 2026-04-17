@@ -25,8 +25,6 @@
 #endif
 
 // Helper macros and constants
-const ImVec2 CARD_SIZE(100.0f, 140.0f);
-const float CORNER_RADIUS = 8.0f;
 const ImU32 COLOR_BG_DARK = IM_COL32(40, 40, 40, 255);
 const ImU32 COLOR_BG_LIGHT = IM_COL32(250, 250, 250, 255);
 const ImU32 COLOR_RED = IM_COL32(220, 50, 50, 255);
@@ -38,6 +36,8 @@ struct GamePreview {
     std::string name;
     std::vector<Pile> piles;
     bool autoCenter = true;
+    ImVec2 cardSize = ImVec2(100.0f, 140.0f);
+    float cornerRadius = 8.0f;
 };
 static std::vector<GamePreview> s_previews;
 static bool s_previews_loaded = false;
@@ -298,6 +298,8 @@ void Game::InitGame(const std::string& scriptPath) {
     m_particles.clear();
     m_winAnimTimer = 0.0f;
 
+    m_cardSize = ImVec2(100.0f, 140.0f);
+    m_cornerRadius = 8.0f;
     s_previews.clear();
     s_previews_loaded = false;
 
@@ -308,6 +310,8 @@ void Game::InitGame(const std::string& scriptPath) {
         m_lua["NumDecks"] = sol::lua_nil;
         m_lua["AutoCenter"] = sol::lua_nil;
         m_lua["Init"] = sol::lua_nil;
+        m_lua["CardSize"] = sol::lua_nil;
+        m_lua["CornerRadius"] = sol::lua_nil;
         m_lua["CanPickup"] = sol::lua_nil;
         m_lua["CanDrop"] = sol::lua_nil;
         m_lua["AfterMove"] = sol::lua_nil;
@@ -320,6 +324,8 @@ void Game::InitGame(const std::string& scriptPath) {
         m_lua.script_file(m_currentScriptPath);
         m_currentGameName = m_lua["GameName"].get_or<std::string>("Unknown Game");
         m_currentHelpText = m_lua["HelpText"].get_or<std::string>("No help available.");
+        m_cardSize = m_lua["CardSize"].get_or(ImVec2(100.0f, 140.0f));
+        m_cornerRadius = m_lua["CornerRadius"].get_or(8.0f);
 
         std::vector<Card> deck;
         int numDecks = m_lua["NumDecks"].get_or(1);
@@ -537,6 +543,8 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
                 m_lua["AutoCenter"] = sol::lua_nil;
                 m_lua["NumDecks"] = sol::lua_nil;
                 m_lua["Init"] = sol::lua_nil;
+                m_lua["CardSize"] = sol::lua_nil;
+                m_lua["CornerRadius"] = sol::lua_nil;
 
                 lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
                 m_lua.script_file(path);
@@ -550,6 +558,8 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
                     sol::protected_function_result result = initFunc(p.piles, deck);
                     if (!result.valid()) { sol::error err = result; throw err; }
                 }
+                p.cardSize = m_lua["CardSize"].get_or(ImVec2(100.0f, 140.0f));
+                p.cornerRadius = m_lua["CornerRadius"].get_or(8.0f);
                 lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
                 s_previews.push_back(p);
             } catch (const sol::error& e) {
@@ -660,7 +670,7 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
         for (auto& p : preview.piles) {
             ImVec2 pPos = ImVec2(boardOffset.x + p.pos.x * mini_scale, boardOffset.y + p.pos.y * mini_scale);
             ImVec2 pSize = ImVec2(p.size.x * mini_scale, p.size.y * mini_scale);
-            DrawEmptyPile(drawList, pPos, pSize, mini_scale, p.type);
+            DrawEmptyPile(drawList, pPos, pSize, mini_scale, p.type, preview.cornerRadius);
 
             int cCount = 0;
             for (auto& c : p.cards) {
@@ -693,9 +703,9 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
 
                 ImVec2 drawPos = ImVec2(screenPos.x + c.animPos.x, screenPos.y + c.animPos.y);
                 if (c.faceUp) {
-                    DrawCard(drawList, drawPos, pSize, c, mini_scale, 1.0f, false, false);
+                DrawCard(drawList, drawPos, pSize, c, mini_scale, preview.cornerRadius, 1.0f, false, false);
                 } else {
-                    DrawCardBack(drawList, drawPos, pSize, mini_scale, 1.0f, false);
+                DrawCardBack(drawList, drawPos, pSize, mini_scale, preview.cornerRadius, 1.0f, false);
                 }
                 cCount++;
             }
@@ -798,7 +808,7 @@ void Game::ProcessInput(float scale, const ImVec2& boardBasePos, int& outHovered
     // Dropping Dragged Cards
     if (mouseReleased && m_dragSourcePile != -1) {
         ImVec2 dragBasePos = ImVec2(mousePos.x - m_dragOffset.x, mousePos.y - m_dragOffset.y);
-        ImVec2 dragCenter = ImVec2(dragBasePos.x + CARD_SIZE.x * scale * 0.5f, dragBasePos.y + CARD_SIZE.y * scale * 0.5f);
+        ImVec2 dragCenter = ImVec2(dragBasePos.x + m_cardSize.x * scale * 0.5f, dragBasePos.y + m_cardSize.y * scale * 0.5f);
         
         int bestDropPile = -1;
         float bestDistSq = 9999999.0f;
@@ -818,13 +828,13 @@ void Game::ProcessInput(float scale, const ImVec2& boardBasePos, int& outHovered
                 
                 ImVec2 targetPos = ImVec2(boardBasePos.x + p.pos.x * scale + p.offset.x * scale * targetDrawIndex, 
                                           boardBasePos.y + p.pos.y * scale + p.offset.y * scale * targetDrawIndex);
-                ImVec2 targetCenter = ImVec2(targetPos.x + CARD_SIZE.x * scale * 0.5f, targetPos.y + CARD_SIZE.y * scale * 0.5f);
+                ImVec2 targetCenter = ImVec2(targetPos.x + m_cardSize.x * scale * 0.5f, targetPos.y + m_cardSize.y * scale * 0.5f);
                 
                 float dx = dragCenter.x - targetCenter.x;
                 float dy = dragCenter.y - targetCenter.y;
                 float distSq = dx * dx + dy * dy;
                 
-                float maxDist = CARD_SIZE.x * scale * 1.5f; // Forgiving distance
+                float maxDist = m_cardSize.x * scale * 1.5f; // Forgiving distance
                 if (distSq < maxDist * maxDist && distSq < bestDistSq) {
                     if (CanDrop(m_dragSourcePile, m_dragCards, i)) {
                         bestDropPile = (int)i;
@@ -974,7 +984,7 @@ bool Game::RenderBoard(ImDrawList* drawList, float scale, const ImVec2& boardBas
         ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
 
         if (p.cards.empty()) {
-            DrawEmptyPile(drawList, basePos, pSize, scale, p.type);
+            DrawEmptyPile(drawList, basePos, pSize, scale, p.type, m_cornerRadius);
         } else {
             bool deferRemaining = false;
             for (size_t c = 0; c < p.cards.size(); ++c) {
@@ -1034,9 +1044,9 @@ bool Game::RenderBoard(ImDrawList* drawList, float scale, const ImVec2& boardBas
                     deferredCards.push_back({&cardRef, pSize, hoveredPile == (int)i && hoveredCard == (int)c});
                 } else {
                     if (cardRef.flipVisual > 0.0f) {
-                        DrawCard(drawList, cardRef.animPos, pSize, cardRef, scale, cardRef.flipVisual, false, hoveredPile == (int)i && hoveredCard == (int)c);
+                        DrawCard(drawList, cardRef.animPos, pSize, cardRef, scale, m_cornerRadius, cardRef.flipVisual, false, hoveredPile == (int)i && hoveredCard == (int)c);
                     } else {
-                        DrawCardBack(drawList, cardRef.animPos, pSize, scale, -cardRef.flipVisual, false);
+                        DrawCardBack(drawList, cardRef.animPos, pSize, scale, m_cornerRadius, -cardRef.flipVisual, false);
                     }
                 }
             }
@@ -1045,15 +1055,15 @@ bool Game::RenderBoard(ImDrawList* drawList, float scale, const ImVec2& boardBas
 
     for (const auto& dc : deferredCards) {
         if (dc.card->flipVisual > 0.0f) {
-            DrawCard(drawList, dc.card->animPos, dc.size, *dc.card, scale, dc.card->flipVisual, false, dc.isHovered);
+            DrawCard(drawList, dc.card->animPos, dc.size, *dc.card, scale, m_cornerRadius, dc.card->flipVisual, false, dc.isHovered);
         } else {
-            DrawCardBack(drawList, dc.card->animPos, dc.size, scale, -dc.card->flipVisual, false);
+            DrawCardBack(drawList, dc.card->animPos, dc.size, scale, m_cornerRadius, -dc.card->flipVisual, false);
         }
     }
 
     if (m_dragSourcePile != -1 && !m_dragCards.empty()) {
         ImVec2 dragBasePos = ImVec2(mousePos.x - m_dragOffset.x, mousePos.y - m_dragOffset.y);
-        ImVec2 pSize = ImVec2(CARD_SIZE.x * scale, CARD_SIZE.y * scale);
+        ImVec2 pSize = ImVec2(m_cardSize.x * scale, m_cardSize.y * scale);
         ImVec2 pOffset = ImVec2(m_piles[m_dragSourcePile].offset.x * scale, m_piles[m_dragSourcePile].offset.y * scale);
 
         ImVec2 pullOffset(0, 0);
@@ -1102,7 +1112,7 @@ bool Game::RenderBoard(ImDrawList* drawList, float scale, const ImVec2& boardBas
                                     dragBasePos.y + pOffset.y * c + swayOffset.y);
             
             m_dragCards[c].animPos = cardPos;
-            DrawCard(drawList, cardPos, pSize, m_dragCards[c], scale, 1.0f, true, false);
+            DrawCard(drawList, cardPos, pSize, m_dragCards[c], scale, m_cornerRadius, 1.0f, true, false);
         }
     }
     
@@ -1238,10 +1248,10 @@ void Game::UpdateAndDraw() {
     CheckWinCondition(scale, cardsAnimating);
 }
 
-void Game::DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, PileType type) {
+void Game::DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, PileType type, float cornerRadius) {
     if (type == PileType::Invisible) return;
 
-    float r = CORNER_RADIUS * scale;
+    float r = cornerRadius * scale;
     drawList->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(30, 60, 30, 100), r);
     drawList->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(50, 100, 50, 150), r, 0, 2.0f * scale);
 
@@ -1265,8 +1275,8 @@ void Game::DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& 
     ImGui::PopFont();
 }
 
-void Game::DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, float widthScale, bool isDragged) {
-    float r = CORNER_RADIUS * scale;
+void Game::DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, float cornerRadius, float widthScale, bool isDragged) {
+    float r = cornerRadius * scale;
     float s = isDragged ? 8.0f * scale : 2.0f * scale; // shadow offset
     float cx = pos.x + size.x * 0.5f;
     float w = size.x * widthScale;
@@ -1299,8 +1309,8 @@ void Game::DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& s
     drawList->AddRect(pMin, pMax, COLOR_BORDER, r, 0, 1.0f * scale);
 }
 
-void Game::DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, const Card& card, float scale, float widthScale, bool isDragged, bool isHovered) {
-    float r = CORNER_RADIUS * scale;
+void Game::DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, const Card& card, float scale, float cornerRadius, float widthScale, bool isDragged, bool isHovered) {
+    float r = cornerRadius * scale;
     float s = isDragged ? 8.0f * scale : 2.0f * scale; // shadow offset
     float cx = pos.x + size.x * 0.5f;
     float w = size.x * widthScale;
