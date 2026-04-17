@@ -69,6 +69,7 @@ struct Particle {
 class Game {
 public:
     Game();
+    ~Game();
     void InitGame(const std::string& scriptPath);
     void UpdateAndDraw();
     bool IsWon() const;

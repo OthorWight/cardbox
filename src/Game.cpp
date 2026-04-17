@@ -88,6 +88,21 @@ Game::Game() {
     LoadAvailableGames();
 }
 
+Game::~Game() {
+    for (int s = 0; s < 4; ++s) {
+        for (int r = 0; r < 13; ++r) {
+            if (m_cardTextures[s][r]) {
+                GLuint tex = (GLuint)(intptr_t)m_cardTextures[s][r];
+                glDeleteTextures(1, &tex);
+            }
+        }
+    }
+    if (m_cardBackTexture) {
+        GLuint tex = (GLuint)(intptr_t)m_cardBackTexture;
+        glDeleteTextures(1, &tex);
+    }
+}
+
 void Game::SetupLuaBindings() {
     // Initialize memory tracking based on what sol2 already allocated before we hijack the allocator
     int kb = lua_gc(m_lua.lua_state(), LUA_GCCOUNT, 0);
