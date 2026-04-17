@@ -288,6 +288,7 @@ void Game::InitGame(const std::string& scriptPath) {
     m_dragCardIndex = -1;
     m_dragCards.clear();
     m_undoStack.clear();
+    m_redoStack.clear();
     m_isWon = false;
     m_particles.clear();
     m_winAnimTimer = 0.0f;
@@ -436,6 +437,7 @@ void Game::HandleClick(int pileIdx) {
         }
         if (changed) {
             m_undoStack.push_back(backup);
+            m_redoStack.clear();
         }
     }
 }
@@ -443,14 +445,22 @@ void Game::HandleClick(int pileIdx) {
 void Game::RenderMenuBar() {
     bool showHelp = false;
     bool doUndo = false;
+    bool doRedo = false;
     bool hasGame = !m_currentScriptPath.empty();
 
     if (hasGame) {
         if (ImGui::IsKeyPressed(ImGuiKey_Z) && ImGui::GetIO().KeyCtrl) {
-            doUndo = true;
+            if (ImGui::GetIO().KeyShift) doRedo = true;
+            else doUndo = true;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_Y) && ImGui::GetIO().KeyCtrl) {
+            doRedo = true;
         }
         if (ImGui::IsMouseClicked(3)) { // Mouse Backward Button
             doUndo = true;
+        }
+        if (ImGui::IsMouseClicked(4)) { // Mouse Forward Button
+            doRedo = true;
         }
         if (ImGui::IsKeyPressed(ImGuiKey_F2)) {
             InitGame(m_currentScriptPath);
@@ -463,6 +473,7 @@ void Game::RenderMenuBar() {
                 m_currentScriptPath.clear();
             }
             if (ImGui::MenuItem("Undo", "Ctrl+Z", false, hasGame && !m_undoStack.empty())) doUndo = true;
+            if (ImGui::MenuItem("Redo", "Ctrl+Y", false, hasGame && !m_redoStack.empty())) doRedo = true;
             if (ImGui::MenuItem("Restart Game", "F2", false, hasGame)) InitGame(m_currentScriptPath);
             ImGui::Separator();
             if (ImGui::MenuItem("Refresh Game List")) {
@@ -490,9 +501,12 @@ void Game::RenderMenuBar() {
 
     if (showHelp) ImGui::OpenPopup("Help");
 
-    // Process undo
+    // Process undo/redo
     if (doUndo) {
         Undo();
+    }
+    if (doRedo) {
+        Redo();
     }
 
     if (ImGui::BeginPopupModal("Help", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -917,6 +931,7 @@ void Game::ProcessAutoSolve() {
                         int idx = move[3];
                         // Do not SaveStateForUndo() here to avoid flooding the undo stack with single auto-moves
                         DoMove(src, dst, idx);
+                        m_redoStack.clear();
                     }
                 } else if (!result.valid()) {
                     sol::error err = result; throw err;
@@ -1472,12 +1487,26 @@ void Game::UpdateWinAnimation(ImDrawList* drawList, float scale) {
 
 void Game::SaveStateForUndo() {
     m_undoStack.push_back(m_piles);
+    m_redoStack.clear();
 }
 
 void Game::Undo() {
     if (m_undoStack.empty()) return;
+    m_redoStack.push_back(m_piles);
     m_piles = m_undoStack.back();
     m_undoStack.pop_back();
+    
+    m_dragSourcePile = -1;
+    m_dragCardIndex = -1;
+    m_dragCards.clear();
+    m_isWon = false;
+}
+
+void Game::Redo() {
+    if (m_redoStack.empty()) return;
+    m_undoStack.push_back(m_piles);
+    m_piles = m_redoStack.back();
+    m_redoStack.pop_back();
     
     m_dragSourcePile = -1;
     m_dragCardIndex = -1;

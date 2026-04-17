@@ -96,8 +96,10 @@ private:
 
     // Undo stack
     std::vector<std::vector<Pile>> m_undoStack;
+    std::vector<std::vector<Pile>> m_redoStack;
     void SaveStateForUndo();
     void Undo();
+    void Redo();
 
     // Core game methods
     void SetupLuaBindings();
