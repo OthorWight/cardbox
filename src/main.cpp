@@ -16,11 +16,20 @@ int main(int argc, char** argv) {
     if (!glfwInit())
         return 1;
 
+    float dpi_scale = 1.0f;
+#if GLFW_VERSION_MAJOR >= 3 && GLFW_VERSION_MINOR >= 3
+    float dummy_y = 1.0f;
+    glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &dpi_scale, &dummy_y);
+#endif
+#ifdef __APPLE__
+    dpi_scale = 1.0f; // macOS coordinates are logical, no manual size multiplication required
+#endif
+
     const char* glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "ImGui Solitaire", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow((int)(1280 * dpi_scale), (int)(720 * dpi_scale), "ImGui Solitaire", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
@@ -37,6 +46,10 @@ int main(int argc, char** argv) {
     ImGuiStyle& style = ImGui::GetStyle();
     style.FontSizeBase = 22.0f;
     io.Fonts->AddFontDefaultVector();
+
+    // Setup High-DPI scaling
+    style.ScaleAllSizes(dpi_scale);
+    io.ConfigDpiScaleFonts = true;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();

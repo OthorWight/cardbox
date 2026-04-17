@@ -20,6 +20,10 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifndef GL_GENERATE_MIPMAP
+#define GL_GENERATE_MIPMAP 0x8191
+#endif
+
 // Helper macros and constants
 const ImVec2 CARD_SIZE(100.0f, 140.0f);
 const float CORNER_RADIUS = 8.0f;
@@ -263,7 +267,8 @@ void Game::LoadCardTextures() {
         GLuint texture;
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE); // Auto-generate mipmaps for high-res downscaling
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -1151,7 +1156,8 @@ void Game::UpdateAndDraw() {
     float scaleY = ImGui::GetWindowHeight() / 720.0f;
     float scale = std::max(0.5f, std::min(scaleX, scaleY));
 
-    ImGui::GetIO().FontGlobalScale = scale;
+    // Factor out the OS scaling to let ImGui native dynamic DPI handle crisp rendering of sizes
+    ImGui::GetStyle().FontScaleMain = scale / ImGui::GetMainViewport()->DpiScale;
 
     RenderMenuBar();
 
