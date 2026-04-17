@@ -581,8 +581,8 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
     float start_x = std::max(0.0f, (window_width - grid_width) * 0.5f);
 
     float dt = ImGui::GetIO().DeltaTime;
-    float animSpeed = 15.0f * dt;
-    if (animSpeed > 1.0f) animSpeed = 1.0f;
+    float decayRate = 15.0f;
+    float expDecay = std::exp(-decayRate * dt);
     if (s_deal_delay > 0.0f) s_deal_delay -= dt;
 
     ImGui::SetCursorPos(ImVec2(start_x, 150.0f * scale + ImGui::GetFrameHeight()));
@@ -682,8 +682,8 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
                     }
                 } else {
                     ImVec2 targetRel = ImVec2(cPos.x - screenPos.x, cPos.y - screenPos.y);
-                    c.animPos.x += (targetRel.x - c.animPos.x) * animSpeed;
-                    c.animPos.y += (targetRel.y - c.animPos.y) * animSpeed;
+                c.animPos.x = targetRel.x + (c.animPos.x - targetRel.x) * expDecay;
+                c.animPos.y = targetRel.y + (c.animPos.y - targetRel.y) * expDecay;
                 }
 
                 ImVec2 drawPos = ImVec2(screenPos.x + c.animPos.x, screenPos.y + c.animPos.y);
@@ -951,8 +951,8 @@ bool Game::RenderBoard(ImDrawList* drawList, float scale, const ImVec2& boardBas
     
     // Draw in correct order, from bottom to top
     float dt = ImGui::GetIO().DeltaTime;
-    float animSpeed = 15.0f * dt;
-    if (animSpeed > 1.0f) animSpeed = 1.0f;
+    float decayRate = 15.0f;
+    float expDecay = std::exp(-decayRate * dt);
     float flipSpeed = 10.0f * dt;
 
     struct AnimCard {
@@ -1001,8 +1001,8 @@ bool Game::RenderBoard(ImDrawList* drawList, float scale, const ImVec2& boardBas
                         continue;
                     }
                 } else {
-                    cardRef.animPos.x += (cardPos.x - cardRef.animPos.x) * animSpeed;
-                    cardRef.animPos.y += (cardPos.y - cardRef.animPos.y) * animSpeed;
+                    cardRef.animPos.x = cardPos.x + (cardRef.animPos.x - cardPos.x) * expDecay;
+                    cardRef.animPos.y = cardPos.y + (cardRef.animPos.y - cardPos.y) * expDecay;
 
                     if (std::abs(cardRef.animPos.x - cardPos.x) > 1.0f || std::abs(cardRef.animPos.y - cardPos.y) > 1.0f) {
                         cardsAnimating = true;
