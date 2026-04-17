@@ -31,13 +31,29 @@ const ImU32 COLOR_RED = IM_COL32(220, 50, 50, 255);
 const ImU32 COLOR_BLACK = IM_COL32(30, 30, 30, 255);
 const ImU32 COLOR_BORDER = IM_COL32(100, 100, 100, 255);
 
+// --- UI & Layout Constants ---
+const ImU32 COLOR_EMPTY_PILE_BG = IM_COL32(30, 60, 30, 100);
+const ImU32 COLOR_EMPTY_PILE_BORDER = IM_COL32(50, 100, 50, 150);
+const ImU32 COLOR_EMPTY_PILE_TEXT = IM_COL32(50, 100, 50, 200);
+const ImU32 COLOR_CARD_BACK_FALLBACK = IM_COL32(35, 75, 145, 255);
+const ImU32 COLOR_CARD_HOVER_GLOW = IM_COL32(255, 255, 150, 200);
+
+constexpr float PREVIEW_WIDTH = 300.0f;
+constexpr float PREVIEW_HEIGHT = 250.0f;
+constexpr float PREVIEW_PADDING = 30.0f;
+constexpr float SHADOW_OFFSET_NORMAL = 2.0f;
+constexpr float SHADOW_OFFSET_DRAGGED = 8.0f;
+constexpr float ANIM_DECAY_RATE = 15.0f;
+constexpr float ANIM_FLIP_SPEED = 10.0f;
+constexpr float DRAG_THRESHOLD = 4.0f;
+
 struct GamePreview {
     std::string path;
     std::string name;
     std::vector<Pile> piles;
     bool autoCenter = true;
-    ImVec2 cardSize = ImVec2(100.0f, 140.0f);
-    float cornerRadius = 8.0f;
+    ImVec2 cardSize = ImVec2(Game::DEFAULT_CARD_WIDTH, Game::DEFAULT_CARD_HEIGHT);
+    float cornerRadius = Game::DEFAULT_CORNER_RADIUS;
 };
 static std::vector<GamePreview> s_previews;
 static bool s_previews_loaded = false;
@@ -298,8 +314,8 @@ void Game::InitGame(const std::string& scriptPath) {
     m_particles.clear();
     m_winAnimTimer = 0.0f;
 
-    m_cardSize = ImVec2(100.0f, 140.0f);
-    m_cornerRadius = 8.0f;
+    m_cardSize = ImVec2(DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT);
+    m_cornerRadius = DEFAULT_CORNER_RADIUS;
     s_previews.clear();
     s_previews_loaded = false;
 
@@ -325,8 +341,8 @@ void Game::InitGame(const std::string& scriptPath) {
         m_currentGameName = m_lua["GameName"].get_or<std::string>("Unknown Game");
         m_currentHelpText = m_lua["HelpText"].get_or<std::string>("No help available.");
         sol::optional<ImVec2> cardSizeOpt = m_lua["CardSize"];
-        m_cardSize = cardSizeOpt ? *cardSizeOpt : ImVec2(100.0f, 140.0f);
-        m_cornerRadius = m_lua["CornerRadius"].get_or(8.0f);
+        m_cardSize = cardSizeOpt ? *cardSizeOpt : ImVec2(DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT);
+        m_cornerRadius = m_lua["CornerRadius"].get_or(DEFAULT_CORNER_RADIUS);
 
         std::vector<Card> deck;
         int numDecks = m_lua["NumDecks"].get_or(1);
@@ -560,8 +576,8 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
                     if (!result.valid()) { sol::error err = result; throw err; }
                 }
             sol::optional<ImVec2> previewCardSizeOpt = m_lua["CardSize"];
-            p.cardSize = previewCardSizeOpt ? *previewCardSizeOpt : ImVec2(100.0f, 140.0f);
-                p.cornerRadius = m_lua["CornerRadius"].get_or(8.0f);
+        p.cardSize = previewCardSizeOpt ? *previewCardSizeOpt : ImVec2(DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT);
+            p.cornerRadius = m_lua["CornerRadius"].get_or(DEFAULT_CORNER_RADIUS);
                 lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
                 s_previews.push_back(p);
             } catch (const sol::error& e) {
@@ -589,16 +605,16 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
     ImGui::SetWindowFontScale(1.0f);
     ImGui::PopFont();
 
-    float preview_width = 300.0f * scale;
-    float preview_height = 250.0f * scale;
-    float padding = 30.0f * scale;
+    float preview_width = PREVIEW_WIDTH * scale;
+    float preview_height = PREVIEW_HEIGHT * scale;
+    float padding = PREVIEW_PADDING * scale;
     int columns = std::max(1, (int)((window_width - padding) / (preview_width + padding)));
     int actual_columns = std::min((int)s_previews.size(), columns);
     float grid_width = actual_columns * preview_width + std::max(0, actual_columns - 1) * padding;
     float start_x = std::max(0.0f, (window_width - grid_width) * 0.5f);
 
     float dt = ImGui::GetIO().DeltaTime;
-    float decayRate = 15.0f;
+    float decayRate = ANIM_DECAY_RATE;
     float expDecay = std::exp(-decayRate * dt);
     if (s_deal_delay > 0.0f) s_deal_delay -= dt;
 
@@ -814,7 +830,7 @@ void Game::ProcessInput(float scale, const ImVec2& boardBasePos, int& outHovered
         
         int bestDropPile = -1;
         float bestDistSq = 9999999.0f;
-        bool isClick = !ImGui::IsMouseDragPastThreshold(0, 4.0f * scale);
+        bool isClick = !ImGui::IsMouseDragPastThreshold(0, DRAG_THRESHOLD * scale);
         
         if (!isClick && ImGui::IsWindowHovered()) {
             for (size_t i = 0; i < m_piles.size(); ++i) {
@@ -968,9 +984,9 @@ bool Game::RenderBoard(ImDrawList* drawList, float scale, const ImVec2& boardBas
     
     // Draw in correct order, from bottom to top
     float dt = ImGui::GetIO().DeltaTime;
-    float decayRate = 15.0f;
+    float decayRate = ANIM_DECAY_RATE;
     float expDecay = std::exp(-decayRate * dt);
-    float flipSpeed = 10.0f * dt;
+    float flipSpeed = ANIM_FLIP_SPEED * dt;
 
     struct AnimCard {
         Card* card;
@@ -1164,8 +1180,8 @@ void Game::CheckWinCondition(float scale, bool cardsAnimating) {
 void Game::UpdateAndDraw() {
     ImDrawList* drawList = ImGui::GetWindowDrawList();
 
-    float scaleX = ImGui::GetWindowWidth() / 1280.0f;
-    float scaleY = ImGui::GetWindowHeight() / 720.0f;
+    float scaleX = ImGui::GetWindowWidth() / REFERENCE_WINDOW_WIDTH;
+    float scaleY = ImGui::GetWindowHeight() / REFERENCE_WINDOW_HEIGHT;
     float scale = std::max(0.5f, std::min(scaleX, scaleY));
 
     // Factor out the OS scaling to let ImGui native dynamic DPI handle crisp rendering of sizes
@@ -1201,7 +1217,7 @@ void Game::UpdateAndDraw() {
     }
     if (minLogicalX > maxLogicalX) {
         minLogicalX = 0.0f;
-        maxLogicalX = 1280.0f;
+        maxLogicalX = REFERENCE_WINDOW_WIDTH;
     }
 
     float logicalWidth = maxLogicalX - minLogicalX;
@@ -1254,12 +1270,12 @@ void Game::DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& 
     if (type == PileType::Invisible) return;
 
     float r = cornerRadius * scale;
-    drawList->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(30, 60, 30, 100), r);
-    drawList->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(50, 100, 50, 150), r, 0, 2.0f * scale);
+    drawList->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), COLOR_EMPTY_PILE_BG, r);
+    drawList->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y), COLOR_EMPTY_PILE_BORDER, r, 0, 2.0f * scale);
 
     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
         float fontSize = 44.0f * scale; // Base 22.0f * 2.0f
-    ImU32 textColor = IM_COL32(50, 100, 50, 200);
+    ImU32 textColor = COLOR_EMPTY_PILE_TEXT;
 
     if (type == PileType::Foundation) {
         ImVec2 tsize = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, "A");
@@ -1279,7 +1295,7 @@ void Game::DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& 
 
 void Game::DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, float cornerRadius, float widthScale, bool isDragged) {
     float r = cornerRadius * scale;
-    float s = isDragged ? 8.0f * scale : 2.0f * scale; // shadow offset
+    float s = (isDragged ? SHADOW_OFFSET_DRAGGED : SHADOW_OFFSET_NORMAL) * scale;
     float cx = pos.x + size.x * 0.5f;
     float w = size.x * widthScale;
     
@@ -1300,7 +1316,7 @@ void Game::DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& s
         drawList->AddImageRounded(m_cardBackTexture, pMin, pMax, ImVec2(uvX0, 0), ImVec2(uvX1, 1), IM_COL32_WHITE, r);
     } else {
         // Nicer Fallback Background (Casino Blue with inset border)
-        drawList->AddRectFilled(pMin, pMax, IM_COL32(35, 75, 145, 255), r);
+        drawList->AddRectFilled(pMin, pMax, COLOR_CARD_BACK_FALLBACK, r);
         
         if (widthScale > 0.05f) {
             drawList->AddRect(ImVec2(pMin.x + 6.0f * scale, pMin.y + 6.0f * scale), ImVec2(pMax.x - 6.0f * scale, pMax.y - 6.0f * scale), IM_COL32(255, 255, 255, 100), r * 0.5f, 0, 1.5f * scale);
@@ -1313,7 +1329,7 @@ void Game::DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& s
 
 void Game::DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, const Card& card, float scale, float cornerRadius, float widthScale, bool isDragged, bool isHovered) {
     float r = cornerRadius * scale;
-    float s = isDragged ? 8.0f * scale : 2.0f * scale; // shadow offset
+    float s = (isDragged ? SHADOW_OFFSET_DRAGGED : SHADOW_OFFSET_NORMAL) * scale;
     float cx = pos.x + size.x * 0.5f;
     float w = size.x * widthScale;
 
@@ -1377,7 +1393,7 @@ void Game::DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size,
     
     // Hover Glow
     if (isHovered && !isDragged) {
-        drawList->AddRect(pMin, pMax, IM_COL32(255, 255, 150, 200), r, 0, 3.0f * scale);
+        drawList->AddRect(pMin, pMax, COLOR_CARD_HOVER_GLOW, r, 0, 3.0f * scale);
     }
 }
 

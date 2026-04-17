@@ -68,6 +68,13 @@ struct Particle {
 
 class Game {
 public:
+    // --- Core Dimension Constants ---
+    static constexpr float REFERENCE_WINDOW_WIDTH = 1280.0f;
+    static constexpr float REFERENCE_WINDOW_HEIGHT = 720.0f;
+    static constexpr float DEFAULT_CARD_WIDTH = 100.0f;
+    static constexpr float DEFAULT_CARD_HEIGHT = 140.0f;
+    static constexpr float DEFAULT_CORNER_RADIUS = 8.0f;
+
     Game();
     ~Game();
     void InitGame(const std::string& scriptPath);
@@ -83,8 +90,8 @@ private:
     std::string m_currentScriptPath;
     
     // Configuration
-    ImVec2 m_cardSize = ImVec2(100.0f, 140.0f);
-    float m_cornerRadius = 8.0f;
+    ImVec2 m_cardSize = ImVec2(DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT);
+    float m_cornerRadius = DEFAULT_CORNER_RADIUS;
     
     // Win state
     bool m_isWon = false;

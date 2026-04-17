@@ -5,6 +5,13 @@
 #include "imgui_impl_opengl3.h"
 #include "Game.h"
 
+// --- App Constants ---
+constexpr float BASE_FONT_SIZE = 22.0f;
+constexpr float BG_COLOR_R = 0.2f;
+constexpr float BG_COLOR_G = 0.4f;
+constexpr float BG_COLOR_B = 0.2f;
+constexpr float BG_COLOR_A = 1.0f;
+
 // Error callback for GLFW
 static void glfw_error_callback(int error, const char* description) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
@@ -29,7 +36,7 @@ int main(int argc, char** argv) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-    GLFWwindow* window = glfwCreateWindow((int)(1280 * dpi_scale), (int)(720 * dpi_scale), "ImGui Solitaire", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow((int)(Game::REFERENCE_WINDOW_WIDTH * dpi_scale), (int)(Game::REFERENCE_WINDOW_HEIGHT * dpi_scale), "ImGui Solitaire", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
@@ -44,7 +51,7 @@ int main(int argc, char** argv) {
 
     // Setup high-res scalable vector font (Available in ImGui 1.92+)
     ImGuiStyle& style = ImGui::GetStyle();
-    style.FontSizeBase = 22.0f;
+    style.FontSizeBase = BASE_FONT_SIZE;
     io.Fonts->AddFontDefaultVector();
 
     // Setup High-DPI scaling
@@ -91,7 +98,7 @@ int main(int argc, char** argv) {
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
         
-        glClearColor(0.2f, 0.4f, 0.2f, 1.0f); // Green felt color
+        glClearColor(BG_COLOR_R, BG_COLOR_G, BG_COLOR_B, BG_COLOR_A); // Green felt color
         glClear(GL_COLOR_BUFFER_BIT);
         
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
