@@ -109,6 +109,15 @@ private:
     void DoMove(int sourcePileIdx, int targetPileIdx, int cardIdx);
     void HandleClick(int pileIdx); // For things like stock pile clicking
     
+    // Refactored UpdateAndDraw helpers
+    void RenderMenuBar();
+    void RenderStartScreen(ImDrawList* drawList, float scale);
+    void RenderInGameMenu(float scale);
+    void ProcessInput(float scale, const ImVec2& boardBasePos, int& outHoveredPile, int& outHoveredCard);
+    void ProcessAutoSolve();
+    bool RenderBoard(ImDrawList* drawList, float scale, const ImVec2& boardBasePos, int hoveredPile, int hoveredCard);
+    void CheckWinCondition(float scale, bool cardsAnimating);
+
     // Assets
     ImTextureID m_cardTextures[4][13] = { 0 };
     ImTextureID m_cardBackTexture = 0;

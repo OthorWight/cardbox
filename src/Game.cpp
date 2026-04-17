@@ -425,22 +425,7 @@ void Game::HandleClick(int pileIdx) {
     }
 }
 
-void Game::UpdateAndDraw() {
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-    ImVec2 mousePos = ImGui::GetMousePos();
-    bool mouseClicked = ImGui::IsMouseClicked(0);
-    bool mouseReleased = ImGui::IsMouseReleased(0);
-    bool rightClicked = ImGui::IsMouseClicked(1);
-
-    // Calculate scale based on window size (1280x720 is our reference resolution)
-    float scaleX = ImGui::GetWindowWidth() / 1280.0f;
-    float scaleY = ImGui::GetWindowHeight() / 720.0f;
-    float scale = std::min(scaleX, scaleY);
-    if (scale < 0.5f) scale = 0.5f;
-
-    ImGui::GetIO().FontGlobalScale = scale;
-
-    // Menu bar
+void Game::RenderMenuBar() {
     bool showHelp = false;
     bool doUndo = false;
     bool hasGame = !m_currentScriptPath.empty();
@@ -504,327 +489,280 @@ void Game::UpdateAndDraw() {
         if (ImGui::Button("Close", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
         ImGui::EndPopup();
     }
+}
 
-    ImVec2 winPos = ImGui::GetWindowPos();
-    // Offset for the menu bar height if necessary, but since it's full screen window we should just start below menu
-    winPos.y += ImGui::GetFrameHeight(); 
+void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
+    if (!s_previews_loaded) {
+        s_previews.clear(); // Ensure we don't duplicate previews when refreshing
+        for (const auto& path : m_availableGames) {
+            GamePreview p;
+            p.path = path;
+            try {
+                // Prevent leaking state from previously evaluated scripts
+                m_lua["GameName"] = sol::lua_nil;
+                m_lua["AutoCenter"] = sol::lua_nil;
+                m_lua["NumDecks"] = sol::lua_nil;
+                m_lua["Init"] = sol::lua_nil;
 
-    // 1. Draw a nice gradient background for a "Lit Felt Table" look
-    drawList->AddRectFilledMultiColor(winPos, ImVec2(winPos.x + ImGui::GetWindowWidth(), winPos.y + ImGui::GetWindowHeight()), 
-                                      IM_COL32(30, 90, 30, 255), IM_COL32(30, 90, 30, 255), IM_COL32(12, 35, 12, 255), IM_COL32(12, 35, 12, 255));
-
-    if (!hasGame) {
-        if (!s_previews_loaded) {
-            s_previews.clear(); // Ensure we don't duplicate previews when refreshing
-            for (const auto& path : m_availableGames) {
-                GamePreview p;
-                p.path = path;
-                try {
-                    // Prevent leaking state from previously evaluated scripts
-                    m_lua["GameName"] = sol::lua_nil;
-                    m_lua["AutoCenter"] = sol::lua_nil;
-                    m_lua["NumDecks"] = sol::lua_nil;
-                    m_lua["Init"] = sol::lua_nil;
-
-                    lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
-                    m_lua.script_file(path);
-                    p.name = m_lua["GameName"].get_or<std::string>("Unknown");
-                    p.autoCenter = m_lua["AutoCenter"].get_or(true);
-                    std::vector<Card> deck;
-                    CreateDeck(deck, m_lua["NumDecks"].get_or(1));
-                    ShuffleDeck(deck);
-                    sol::protected_function initFunc = m_lua["Init"];
-                    if (initFunc.valid()) {
-                        sol::protected_function_result result = initFunc(p.piles, deck);
-                        if (!result.valid()) { sol::error err = result; throw err; }
-                    }
-                    lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
-                    s_previews.push_back(p);
-                } catch (const sol::error& e) {
-                    lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
-                    std::cerr << "Lua Error loading preview for " << path << ": " << e.what() << std::endl;
-                } catch (...) {
-                    lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
-                    continue;
+                lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+                m_lua.script_file(path);
+                p.name = m_lua["GameName"].get_or<std::string>("Unknown");
+                p.autoCenter = m_lua["AutoCenter"].get_or(true);
+                std::vector<Card> deck;
+                CreateDeck(deck, m_lua["NumDecks"].get_or(1));
+                ShuffleDeck(deck);
+                sol::protected_function initFunc = m_lua["Init"];
+                if (initFunc.valid()) {
+                    sol::protected_function_result result = initFunc(p.piles, deck);
+                    if (!result.valid()) { sol::error err = result; throw err; }
                 }
+                lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+                s_previews.push_back(p);
+            } catch (const sol::error& e) {
+                lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+                std::cerr << "Lua Error loading preview for " << path << ": " << e.what() << std::endl;
+            } catch (...) {
+                lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+                continue;
             }
+        }
         std::sort(s_previews.begin(), s_previews.end(), [](const GamePreview& a, const GamePreview& b) {
             return a.name < b.name;
         });
-            s_previews_loaded = true;
-            s_deal_delay = 0.5f; // Wait half a second before dealing
+        s_previews_loaded = true;
+        s_deal_delay = 0.5f; // Wait half a second before dealing
+    }
+
+    float window_width = ImGui::GetWindowWidth();
+
+    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+    ImGui::SetWindowFontScale(2.5f * scale);
+    float text_width = ImGui::CalcTextSize("Select a Game").x;
+    ImGui::SetCursorPos(ImVec2((window_width - text_width) * 0.5f, 50.0f * scale + ImGui::GetFrameHeight()));
+    ImGui::TextColored(ImVec4(1, 1, 1, 1), "Select a Game");
+    ImGui::SetWindowFontScale(1.0f);
+    ImGui::PopFont();
+
+    float preview_width = 300.0f * scale;
+    float preview_height = 250.0f * scale;
+    float padding = 30.0f * scale;
+    int columns = std::max(1, (int)((window_width - padding) / (preview_width + padding)));
+    int actual_columns = std::min((int)s_previews.size(), columns);
+    float grid_width = actual_columns * preview_width + std::max(0, actual_columns - 1) * padding;
+    float start_x = std::max(0.0f, (window_width - grid_width) * 0.5f);
+
+    float dt = ImGui::GetIO().DeltaTime;
+    float animSpeed = 15.0f * dt;
+    if (animSpeed > 1.0f) animSpeed = 1.0f;
+    if (s_deal_delay > 0.0f) s_deal_delay -= dt;
+
+    ImGui::SetCursorPos(ImVec2(start_x, 150.0f * scale + ImGui::GetFrameHeight()));
+    int col = 0;
+    for (auto& preview : s_previews) {
+        ImVec2 cursorPos = ImGui::GetCursorPos();
+        ImVec2 screenPos = ImGui::GetCursorScreenPos();
+
+        ImGui::PushID(preview.path.c_str());
+        if (ImGui::InvisibleButton("##gamebtn", ImVec2(preview_width, preview_height))) {
+            InitGame(preview.path);
+            ImGui::PopID();
+            break;
         }
 
-        float window_width = ImGui::GetWindowWidth();
+        bool hovered = ImGui::IsItemHovered();
+        if (hovered) {
+            drawList->AddRectFilled(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), IM_COL32(255, 255, 255, 40), 12.0f);
+            drawList->AddRect(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), IM_COL32(255, 255, 255, 200), 12.0f, 0, 3.0f);
+        } else {
+            drawList->AddRectFilled(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), IM_COL32(0, 0, 0, 80), 12.0f);
+            drawList->AddRect(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), IM_COL32(255, 255, 255, 100), 12.0f, 0, 1.0f);
+        }
 
-        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
-        ImGui::SetWindowFontScale(2.5f * scale);
-        float text_width = ImGui::CalcTextSize("Select a Game").x;
-        ImGui::SetCursorPos(ImVec2((window_width - text_width) * 0.5f, 50.0f * scale + ImGui::GetFrameHeight()));
-        ImGui::TextColored(ImVec4(1, 1, 1, 1), "Select a Game");
-        ImGui::SetWindowFontScale(1.0f);
-        ImGui::PopFont();
-
-        float preview_width = 300.0f * scale;
-        float preview_height = 250.0f * scale;
-        float padding = 30.0f * scale;
-        int columns = std::max(1, (int)((window_width - padding) / (preview_width + padding)));
-        int actual_columns = std::min((int)s_previews.size(), columns);
-        float grid_width = actual_columns * preview_width + std::max(0, actual_columns - 1) * padding;
-        float start_x = std::max(0.0f, (window_width - grid_width) * 0.5f);
-
-        float dt = ImGui::GetIO().DeltaTime;
-        float animSpeed = 15.0f * dt;
-        if (animSpeed > 1.0f) animSpeed = 1.0f;
-        if (s_deal_delay > 0.0f) s_deal_delay -= dt;
-
-        ImGui::SetCursorPos(ImVec2(start_x, 150.0f * scale + ImGui::GetFrameHeight()));
-        int col = 0;
-        for (auto& preview : s_previews) {
-            ImVec2 cursorPos = ImGui::GetCursorPos();
-            ImVec2 screenPos = ImGui::GetCursorScreenPos();
-
-            ImGui::PushID(preview.path.c_str());
-            if (ImGui::InvisibleButton("##gamebtn", ImVec2(preview_width, preview_height))) {
-                InitGame(preview.path);
-                ImGui::PopID();
-                break;
-            }
-
-            bool hovered = ImGui::IsItemHovered();
-            if (hovered) {
-                drawList->AddRectFilled(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), IM_COL32(255, 255, 255, 40), 12.0f);
-                drawList->AddRect(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), IM_COL32(255, 255, 255, 200), 12.0f, 0, 3.0f);
-            } else {
-                drawList->AddRectFilled(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), IM_COL32(0, 0, 0, 80), 12.0f);
-                drawList->AddRect(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), IM_COL32(255, 255, 255, 100), 12.0f, 0, 1.0f);
-            }
-
-            float mini_scale = scale * 0.22f;
-            float minLogX = 999999.0f, maxLogX = -999999.0f;
-            float minLogY = 999999.0f, maxLogY = -999999.0f;
-            for (const auto& p : preview.piles) {
-                if (p.type == PileType::Invisible) continue;
-                int maxDrawIndex = 0;
-                if (!p.cards.empty()) {
-                    maxDrawIndex = (int)p.cards.size() - 1;
-                    if (p.type == PileType::Waste && p.cards.size() > 3) {
-                        maxDrawIndex = std::max(0, maxDrawIndex - (int)(p.cards.size() - 3));
-                    }
+        float mini_scale = scale * 0.22f;
+        float minLogX = 999999.0f, maxLogX = -999999.0f;
+        float minLogY = 999999.0f, maxLogY = -999999.0f;
+        for (const auto& p : preview.piles) {
+            if (p.type == PileType::Invisible) continue;
+            int maxDrawIndex = 0;
+            if (!p.cards.empty()) {
+                maxDrawIndex = (int)p.cards.size() - 1;
+                if (p.type == PileType::Waste && p.cards.size() > 3) {
+                    maxDrawIndex = std::max(0, maxDrawIndex - (int)(p.cards.size() - 3));
                 }
-                float leftEdge = p.pos.x;
-                float rightEdge = p.pos.x + p.size.x;
-                if (p.offset.x > 0) rightEdge += p.offset.x * maxDrawIndex;
-                else if (p.offset.x < 0) leftEdge += p.offset.x * maxDrawIndex;
-                
-                float topEdge = p.pos.y;
-                float bottomEdge = p.pos.y + p.size.y;
-                if (p.offset.y > 0) bottomEdge += p.offset.y * maxDrawIndex;
-                else if (p.offset.y < 0) topEdge += p.offset.y * maxDrawIndex;
-                
-                if (leftEdge < minLogX) minLogX = leftEdge;
-                if (rightEdge > maxLogX) maxLogX = rightEdge;
-                if (topEdge < minLogY) minLogY = topEdge;
-                if (bottomEdge > maxLogY) maxLogY = bottomEdge;
             }
-            if (minLogX > maxLogX) { minLogX = 0.0f; maxLogX = 800.0f; minLogY = 0.0f; maxLogY = 600.0f; }
+            float leftEdge = p.pos.x;
+            float rightEdge = p.pos.x + p.size.x;
+            if (p.offset.x > 0) rightEdge += p.offset.x * maxDrawIndex;
+            else if (p.offset.x < 0) leftEdge += p.offset.x * maxDrawIndex;
             
-            float contentW = (maxLogX - minLogX) * mini_scale;
-            float contentH = (maxLogY - minLogY) * mini_scale;
-            float bOffsetX = (preview_width - contentW) * 0.5f;
-            float availH = preview_height - 40.0f * scale;
-            float bOffsetY = 40.0f * scale + std::max(0.0f, (availH - contentH) * 0.5f);
+            float topEdge = p.pos.y;
+            float bottomEdge = p.pos.y + p.size.y;
+            if (p.offset.y > 0) bottomEdge += p.offset.y * maxDrawIndex;
+            else if (p.offset.y < 0) topEdge += p.offset.y * maxDrawIndex;
+            
+            if (leftEdge < minLogX) minLogX = leftEdge;
+            if (rightEdge > maxLogX) maxLogX = rightEdge;
+            if (topEdge < minLogY) minLogY = topEdge;
+            if (bottomEdge > maxLogY) maxLogY = bottomEdge;
+        }
+        if (minLogX > maxLogX) { minLogX = 0.0f; maxLogX = 800.0f; minLogY = 0.0f; maxLogY = 600.0f; }
+        
+        float contentW = (maxLogX - minLogX) * mini_scale;
+        float contentH = (maxLogY - minLogY) * mini_scale;
+        float bOffsetX = (preview_width - contentW) * 0.5f;
+        float availH = preview_height - 40.0f * scale;
+        float bOffsetY = 40.0f * scale + std::max(0.0f, (availH - contentH) * 0.5f);
 
-            ImVec2 boardOffset;
-            if (preview.autoCenter) {
-                boardOffset = ImVec2(screenPos.x + bOffsetX - minLogX * mini_scale, screenPos.y + bOffsetY - minLogY * mini_scale);
-            } else {
-                boardOffset = ImVec2(screenPos.x, screenPos.y + 40.0f * scale);
-            }
+        ImVec2 boardOffset;
+        if (preview.autoCenter) {
+            boardOffset = ImVec2(screenPos.x + bOffsetX - minLogX * mini_scale, screenPos.y + bOffsetY - minLogY * mini_scale);
+        } else {
+            boardOffset = ImVec2(screenPos.x, screenPos.y + 40.0f * scale);
+        }
 
-            drawList->PushClipRect(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), true);
+        drawList->PushClipRect(screenPos, ImVec2(screenPos.x + preview_width, screenPos.y + preview_height), true);
 
-            int cardsInitializedThisFrame = 0;
-            for (auto& p : preview.piles) {
-                ImVec2 pPos = ImVec2(boardOffset.x + p.pos.x * mini_scale, boardOffset.y + p.pos.y * mini_scale);
-                ImVec2 pSize = ImVec2(p.size.x * mini_scale, p.size.y * mini_scale);
-                DrawEmptyPile(drawList, pPos, pSize, mini_scale, p.type);
+        int cardsInitializedThisFrame = 0;
+        for (auto& p : preview.piles) {
+            ImVec2 pPos = ImVec2(boardOffset.x + p.pos.x * mini_scale, boardOffset.y + p.pos.y * mini_scale);
+            ImVec2 pSize = ImVec2(p.size.x * mini_scale, p.size.y * mini_scale);
+            DrawEmptyPile(drawList, pPos, pSize, mini_scale, p.type);
 
-                int cCount = 0;
-                for (auto& c : p.cards) {
-                    int drawIndex = cCount;
-                    if (p.type == PileType::Waste && p.cards.size() > 3) {
-                        drawIndex = std::max(0, cCount - (int)(p.cards.size() - 3));
-                    }
-                    ImVec2 cPos = ImVec2(pPos.x + p.offset.x * mini_scale * drawIndex, pPos.y + p.offset.y * mini_scale * drawIndex);
-                    if (!c.hasInitializedPos) {
-                        if (s_deal_delay <= 0.0f && cardsInitializedThisFrame < 2) {
-                            ImVec2 startPos = ImVec2(screenPos.x + preview_width * 0.5f, screenPos.y + preview_height + 50.0f * scale);
-                            for (const auto& sp : preview.piles) {
-                                if (sp.type == PileType::Stock) {
-                                    int drawIndex = sp.cards.empty() ? 0 : (int)sp.cards.size() - 1;
-                                    startPos = ImVec2(boardOffset.x + (sp.pos.x + sp.offset.x * drawIndex) * mini_scale, boardOffset.y + (sp.pos.y + sp.offset.y * drawIndex) * mini_scale);
-                                    break;
-                                }
+            int cCount = 0;
+            for (auto& c : p.cards) {
+                int drawIndex = cCount;
+                if (p.type == PileType::Waste && p.cards.size() > 3) {
+                    drawIndex = std::max(0, cCount - (int)(p.cards.size() - 3));
+                }
+                ImVec2 cPos = ImVec2(pPos.x + p.offset.x * mini_scale * drawIndex, pPos.y + p.offset.y * mini_scale * drawIndex);
+                if (!c.hasInitializedPos) {
+                    if (s_deal_delay <= 0.0f && cardsInitializedThisFrame < 2) {
+                        ImVec2 startPos = ImVec2(screenPos.x + preview_width * 0.5f, screenPos.y + preview_height + 50.0f * scale);
+                        for (const auto& sp : preview.piles) {
+                            if (sp.type == PileType::Stock) {
+                                int drawIdx = sp.cards.empty() ? 0 : (int)sp.cards.size() - 1;
+                                startPos = ImVec2(boardOffset.x + (sp.pos.x + sp.offset.x * drawIdx) * mini_scale, boardOffset.y + (sp.pos.y + sp.offset.y * drawIdx) * mini_scale);
+                                break;
                             }
-                        c.animPos = ImVec2(startPos.x - screenPos.x, startPos.y - screenPos.y);
-                            c.hasInitializedPos = true;
-                            cardsInitializedThisFrame++;
-                        } else {
-                            continue;
                         }
+                        c.animPos = ImVec2(startPos.x - screenPos.x, startPos.y - screenPos.y);
+                        c.hasInitializedPos = true;
+                        cardsInitializedThisFrame++;
                     } else {
+                        continue;
+                    }
+                } else {
                     ImVec2 targetRel = ImVec2(cPos.x - screenPos.x, cPos.y - screenPos.y);
                     c.animPos.x += (targetRel.x - c.animPos.x) * animSpeed;
                     c.animPos.y += (targetRel.y - c.animPos.y) * animSpeed;
-                    }
+                }
 
                 ImVec2 drawPos = ImVec2(screenPos.x + c.animPos.x, screenPos.y + c.animPos.y);
-                    if (c.faceUp) {
+                if (c.faceUp) {
                     DrawCard(drawList, drawPos, pSize, c, mini_scale, 1.0f, false, false);
-                    } else {
-                    DrawCardBack(drawList, drawPos, pSize, mini_scale, 1.0f, false);
-                    }
-                    cCount++;
-                }
-            }
-
-            drawList->PopClipRect();
-
-            // Draw title text on top with a black outline
-            float outline = 1.5f * scale;
-            float tSize = ImGui::GetFontSize() * 1.5f * scale;
-            float tWrap = preview_width - 30.0f * scale;
-            ImVec2 textSize = ImGui::GetFont()->CalcTextSizeA(tSize, FLT_MAX, tWrap, preview.name.c_str());
-            ImVec2 tPos = ImVec2(screenPos.x + (preview_width - textSize.x) * 0.5f, screenPos.y + 15.0f * scale);
-            ImU32 outlineCol = IM_COL32(0, 0, 0, 255);
-            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x - outline, tPos.y - outline), outlineCol, preview.name.c_str(), NULL, tWrap);
-            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x + outline, tPos.y - outline), outlineCol, preview.name.c_str(), NULL, tWrap);
-            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x - outline, tPos.y + outline), outlineCol, preview.name.c_str(), NULL, tWrap);
-            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x + outline, tPos.y + outline), outlineCol, preview.name.c_str(), NULL, tWrap);
-            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x - outline, tPos.y), outlineCol, preview.name.c_str(), NULL, tWrap);
-            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x + outline, tPos.y), outlineCol, preview.name.c_str(), NULL, tWrap);
-            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x, tPos.y - outline), outlineCol, preview.name.c_str(), NULL, tWrap);
-            drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x, tPos.y + outline), outlineCol, preview.name.c_str(), NULL, tWrap);
-            drawList->AddText(ImGui::GetFont(), tSize, tPos, IM_COL32_WHITE, preview.name.c_str(), NULL, tWrap);
-
-            ImGui::PopID();
-
-            col++;
-            if (col < columns) {
-                ImGui::SetCursorPos(ImVec2(cursorPos.x + preview_width + padding, cursorPos.y));
-            } else {
-                col = 0;
-                ImGui::SetCursorPos(ImVec2(start_x, cursorPos.y + preview_height + padding));
-            }
-        }
-        ImGui::Dummy(ImVec2(0.0f, 0.0f));
-        return;
-    }
-    
-    // Back arrow when in-game
-    if (hasGame) {
-        ImGui::SetCursorPos(ImVec2(10.0f * scale, 0.0f));
-        ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 0));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(255, 255, 255, 50));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(255, 255, 255, 100));
-        
-        if (ImGui::ArrowButton("##BackToStart", ImGuiDir_Left)) {
-            m_currentScriptPath.clear();
-        }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Return to Start Screen");
-
-        ImGui::SameLine();
-        if (ImGui::Button("Reload")) {
-            InitGame(m_currentScriptPath);
-        }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Restart Game");
-
-        ImGui::PopStyleColor(3);
-    }
-
-    // Calculate logical bounding box to center the board
-    float minLogicalX = 999999.0f;
-    float maxLogicalX = -999999.0f;
-    for (const auto& p : m_piles) {
-        if (p.type == PileType::Invisible) continue;
-        float leftEdge = p.pos.x;
-        float rightEdge = p.pos.x + p.size.x;
-        if (p.offset.x > 0) rightEdge += 2 * p.offset.x;
-        else if (p.offset.x < 0) leftEdge += 2 * p.offset.x;
-        
-        if (leftEdge < minLogicalX) minLogicalX = leftEdge;
-        if (rightEdge > maxLogicalX) maxLogicalX = rightEdge;
-    }
-    if (minLogicalX > maxLogicalX) {
-        minLogicalX = 0.0f;
-        maxLogicalX = 1280.0f;
-    }
-
-    float logicalWidth = maxLogicalX - minLogicalX;
-    float boardPixelWidth = logicalWidth * scale;
-    float boardOffsetX = (ImGui::GetWindowWidth() - boardPixelWidth) * 0.5f;
-    if (boardOffsetX < 0.0f) boardOffsetX = 0.0f;
-    
-    ImVec2 boardBasePos = winPos;
-    bool autoCenter = m_lua["AutoCenter"].get_or(true);
-    if (autoCenter) {
-        boardBasePos.x += boardOffsetX - (minLogicalX * scale);
-    }
-
-    s_boardScale = scale;
-    s_boardBasePos = boardBasePos;
-
-    // Interaction vars
-    int hoveredPile = -1;
-    int hoveredCard = -1;
-
-    // Are cards being dealt initially?
-    bool isDealing = false;
-    for (const auto& p : m_piles) {
-        for (const auto& c : p.cards) {
-            if (!c.hasInitializedPos) isDealing = true;
-        }
-    }
-
-    if (!isDealing && !m_isWon) {
-        // 2. Calculate Hover Logic BEFORE Drawing
-        if (ImGui::IsWindowHovered()) {
-            for (size_t i = 0; i < m_piles.size(); ++i) {
-                Pile& p = m_piles[i];
-                ImVec2 basePos = ImVec2(boardBasePos.x + p.pos.x * scale, boardBasePos.y + p.pos.y * scale);
-                ImVec2 pSize = ImVec2(p.size.x * scale, p.size.y * scale);
-                ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
-    
-                if (p.cards.empty()) {
-                    if (p.type != PileType::Invisible) {
-                        if (mousePos.x >= basePos.x && mousePos.x <= basePos.x + pSize.x &&
-                            mousePos.y >= basePos.y && mousePos.y <= basePos.y + pSize.y) {
-                            hoveredPile = (int)i;
-                            hoveredCard = -1;
-                        }
-                    }
                 } else {
-                    for (size_t c = 0; c < p.cards.size(); ++c) {
-                        int drawIndex = (int)c;
-                        if (p.type == PileType::Waste && p.cards.size() > 3) {
-                            drawIndex = std::max(0, (int)c - (int)(p.cards.size() - 3));
-                        }
+                    DrawCardBack(drawList, drawPos, pSize, mini_scale, 1.0f, false);
+                }
+                cCount++;
+            }
+        }
+
+        drawList->PopClipRect();
+
+        // Draw title text on top with a black outline
+        float outline = 1.5f * scale;
+        float tSize = ImGui::GetFontSize() * 1.5f * scale;
+        float tWrap = preview_width - 30.0f * scale;
+        ImVec2 textSize = ImGui::GetFont()->CalcTextSizeA(tSize, FLT_MAX, tWrap, preview.name.c_str());
+        ImVec2 tPos = ImVec2(screenPos.x + (preview_width - textSize.x) * 0.5f, screenPos.y + 15.0f * scale);
+        ImU32 outlineCol = IM_COL32(0, 0, 0, 255);
+        drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x - outline, tPos.y - outline), outlineCol, preview.name.c_str(), NULL, tWrap);
+        drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x + outline, tPos.y - outline), outlineCol, preview.name.c_str(), NULL, tWrap);
+        drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x - outline, tPos.y + outline), outlineCol, preview.name.c_str(), NULL, tWrap);
+        drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x + outline, tPos.y + outline), outlineCol, preview.name.c_str(), NULL, tWrap);
+        drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x - outline, tPos.y), outlineCol, preview.name.c_str(), NULL, tWrap);
+        drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x + outline, tPos.y), outlineCol, preview.name.c_str(), NULL, tWrap);
+        drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x, tPos.y - outline), outlineCol, preview.name.c_str(), NULL, tWrap);
+        drawList->AddText(ImGui::GetFont(), tSize, ImVec2(tPos.x, tPos.y + outline), outlineCol, preview.name.c_str(), NULL, tWrap);
+        drawList->AddText(ImGui::GetFont(), tSize, tPos, IM_COL32_WHITE, preview.name.c_str(), NULL, tWrap);
+
+        ImGui::PopID();
+
+        col++;
+        if (col < columns) {
+            ImGui::SetCursorPos(ImVec2(cursorPos.x + preview_width + padding, cursorPos.y));
+        } else {
+            col = 0;
+            ImGui::SetCursorPos(ImVec2(start_x, cursorPos.y + preview_height + padding));
+        }
+    }
+    ImGui::Dummy(ImVec2(0.0f, 0.0f));
+}
+
+void Game::RenderInGameMenu(float scale) {
+    ImGui::SetCursorPos(ImVec2(10.0f * scale, 0.0f));
+    ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(255, 255, 255, 50));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(255, 255, 255, 100));
     
-                        ImVec2 cardPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
-                        if (mousePos.x >= cardPos.x && mousePos.x <= cardPos.x + pSize.x &&
-                            mousePos.y >= cardPos.y && mousePos.y <= cardPos.y + pSize.y) {
-                            hoveredPile = (int)i;
-                            hoveredCard = (int)c;
-                        }
+    if (ImGui::ArrowButton("##BackToStart", ImGuiDir_Left)) {
+        m_currentScriptPath.clear();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Return to Start Screen");
+
+    ImGui::SameLine();
+    if (ImGui::Button("Reload")) {
+        InitGame(m_currentScriptPath);
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Restart Game");
+
+    ImGui::PopStyleColor(3);
+}
+
+void Game::ProcessInput(float scale, const ImVec2& boardBasePos, int& outHoveredPile, int& outHoveredCard) {
+    ImVec2 mousePos = ImGui::GetMousePos();
+    bool mouseClicked = ImGui::IsMouseClicked(0);
+    bool mouseReleased = ImGui::IsMouseReleased(0);
+    bool rightClicked = ImGui::IsMouseClicked(1);
+
+    outHoveredPile = -1;
+    outHoveredCard = -1;
+
+    if (ImGui::IsWindowHovered()) {
+        for (size_t i = 0; i < m_piles.size(); ++i) {
+            Pile& p = m_piles[i];
+            ImVec2 basePos = ImVec2(boardBasePos.x + p.pos.x * scale, boardBasePos.y + p.pos.y * scale);
+            ImVec2 pSize = ImVec2(p.size.x * scale, p.size.y * scale);
+            ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
+
+            if (p.cards.empty()) {
+                if (p.type != PileType::Invisible) {
+                    if (mousePos.x >= basePos.x && mousePos.x <= basePos.x + pSize.x &&
+                        mousePos.y >= basePos.y && mousePos.y <= basePos.y + pSize.y) {
+                        outHoveredPile = (int)i;
+                        outHoveredCard = -1;
+                    }
+                }
+            } else {
+                for (size_t c = 0; c < p.cards.size(); ++c) {
+                    int drawIndex = (int)c;
+                    if (p.type == PileType::Waste && p.cards.size() > 3) {
+                        drawIndex = std::max(0, (int)c - (int)(p.cards.size() - 3));
+                    }
+
+                    ImVec2 cardPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
+                    if (mousePos.x >= cardPos.x && mousePos.x <= cardPos.x + pSize.x &&
+                        mousePos.y >= cardPos.y && mousePos.y <= cardPos.y + pSize.y) {
+                        outHoveredPile = (int)i;
+                        outHoveredCard = (int)c;
                     }
                 }
             }
         }
+    }
 
-        // 3. Input Handling
-        // Dropping Dragged Cards
-        if (mouseReleased && m_dragSourcePile != -1) {
+    // Dropping Dragged Cards
+    if (mouseReleased && m_dragSourcePile != -1) {
         ImVec2 dragBasePos = ImVec2(mousePos.x - m_dragOffset.x, mousePos.y - m_dragOffset.y);
         ImVec2 dragCenter = ImVec2(dragBasePos.x + CARD_SIZE.x * scale * 0.5f, dragBasePos.y + CARD_SIZE.y * scale * 0.5f);
         
@@ -877,7 +815,6 @@ void Game::UpdateAndDraw() {
             
             if (isClick) {
                 HandleClick(m_dragSourcePile);
-            } else {
             }
         }
         
@@ -887,52 +824,52 @@ void Game::UpdateAndDraw() {
     }
 
     // Right-click auto-move
-    if (rightClicked && hoveredPile != -1 && hoveredCard != -1 && m_dragSourcePile == -1) {
-        if (CanPickup(hoveredPile, hoveredCard)) {
-            std::vector<Card> stack(m_piles[hoveredPile].cards.begin() + hoveredCard, m_piles[hoveredPile].cards.end());
+    if (rightClicked && outHoveredPile != -1 && outHoveredCard != -1 && m_dragSourcePile == -1) {
+        if (CanPickup(outHoveredPile, outHoveredCard)) {
+            std::vector<Card> stack(m_piles[outHoveredPile].cards.begin() + outHoveredCard, m_piles[outHoveredPile].cards.end());
             int bestDrop = -1;
             for (size_t i = 0; i < m_piles.size(); ++i) {
-                if (m_piles[i].type == PileType::Foundation && CanDrop(hoveredPile, stack, (int)i)) {
+                if (m_piles[i].type == PileType::Foundation && CanDrop(outHoveredPile, stack, (int)i)) {
                     bestDrop = (int)i; break;
                 }
             }
             if (bestDrop == -1) {
                 for (size_t i = 0; i < m_piles.size(); ++i) {
-                    if ((m_piles[i].type == PileType::Tableau || m_piles[i].type == PileType::FreeCellSlot) && CanDrop(hoveredPile, stack, (int)i)) {
+                    if ((m_piles[i].type == PileType::Tableau || m_piles[i].type == PileType::FreeCellSlot) && CanDrop(outHoveredPile, stack, (int)i)) {
                         bestDrop = (int)i; break;
                     }
                 }
             }
             if (bestDrop != -1) {
-                            SaveStateForUndo();
-                DoMove(hoveredPile, bestDrop, hoveredCard);
+                SaveStateForUndo();
+                DoMove(outHoveredPile, bestDrop, outHoveredCard);
             }
         }
     }
     // Single Click / Start Drag
-    else if (mouseClicked && hoveredPile != -1) {
-        if (m_piles[hoveredPile].type == PileType::Stock) {
-            HandleClick(hoveredPile);
-        } else if (hoveredCard != -1) {
-            if (CanPickup(hoveredPile, hoveredCard)) {
-                m_dragSourcePile = hoveredPile;
-                m_dragCardIndex = hoveredCard;
-                Pile& p = m_piles[hoveredPile];
-                m_dragCards.assign(p.cards.begin() + hoveredCard, p.cards.end());
+    else if (mouseClicked && outHoveredPile != -1) {
+        if (m_piles[outHoveredPile].type == PileType::Stock) {
+            HandleClick(outHoveredPile);
+        } else if (outHoveredCard != -1) {
+            if (CanPickup(outHoveredPile, outHoveredCard)) {
+                m_dragSourcePile = outHoveredPile;
+                m_dragCardIndex = outHoveredCard;
+                Pile& p = m_piles[outHoveredPile];
+                m_dragCards.assign(p.cards.begin() + outHoveredCard, p.cards.end());
                 
                 ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
-                int drawIndex = hoveredCard;
+                int drawIndex = outHoveredCard;
                 if (p.type == PileType::Waste && p.cards.size() > 3) {
-                    drawIndex = std::max(0, (int)hoveredCard - (int)(p.cards.size() - 3));
+                    drawIndex = std::max(0, (int)outHoveredCard - (int)(p.cards.size() - 3));
                 }
                 ImVec2 cardPos = ImVec2(boardBasePos.x + p.pos.x * scale + pOffset.x * drawIndex, 
                                         boardBasePos.y + p.pos.y * scale + pOffset.y * drawIndex);
                 m_dragOffset = ImVec2(mousePos.x - cardPos.x, mousePos.y - cardPos.y);
             } else {
-                HandleClick(hoveredPile);
+                HandleClick(outHoveredPile);
             }
-        } else if (m_piles[hoveredPile].cards.empty()) {
-            HandleClick(hoveredPile);
+        } else if (m_piles[outHoveredPile].cards.empty()) {
+            HandleClick(outHoveredPile);
         }
     }
 
@@ -946,12 +883,12 @@ void Game::UpdateAndDraw() {
         m_dragCardIndex = -1;
         m_dragCards.clear();
     }
+}
 
-    // 4. Auto Solve
+void Game::ProcessAutoSolve() {
     if (m_dragSourcePile == -1) {
         sol::protected_function autoSolve = m_lua["AutoSolve"];
         if (autoSolve.valid()) {
-            
             try {
                 lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
                 sol::protected_function_result result = autoSolve(m_piles);
@@ -975,188 +912,169 @@ void Game::UpdateAndDraw() {
             }
         }
     }
-    } // End of if (!m_isWon)
+}
 
-    // 4. Draw piles
+bool Game::RenderBoard(ImDrawList* drawList, float scale, const ImVec2& boardBasePos, int hoveredPile, int hoveredCard) {
     bool cardsAnimating = false;
-    {
-        int cardsInitializedThisFrame = 0;
-        // Draw in correct order, from bottom to top
-        float dt = ImGui::GetIO().DeltaTime;
-        float animSpeed = 15.0f * dt;
-        if (animSpeed > 1.0f) animSpeed = 1.0f;
-        float flipSpeed = 10.0f * dt;
+    ImVec2 mousePos = ImGui::GetMousePos();
+    int cardsInitializedThisFrame = 0;
+    
+    // Draw in correct order, from bottom to top
+    float dt = ImGui::GetIO().DeltaTime;
+    float animSpeed = 15.0f * dt;
+    if (animSpeed > 1.0f) animSpeed = 1.0f;
+    float flipSpeed = 10.0f * dt;
 
-        struct AnimCard {
-            Card* card;
-            ImVec2 size;
-            bool isHovered;
-        };
-        std::vector<AnimCard> deferredCards;
+    struct AnimCard {
+        Card* card;
+        ImVec2 size;
+        bool isHovered;
+    };
+    std::vector<AnimCard> deferredCards;
+
+    for (size_t i = 0; i < m_piles.size(); ++i) {
+        Pile& p = m_piles[i];
+        ImVec2 basePos = ImVec2(boardBasePos.x + p.pos.x * scale, boardBasePos.y + p.pos.y * scale);
+        ImVec2 pSize = ImVec2(p.size.x * scale, p.size.y * scale);
+        ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
+
+        if (p.cards.empty()) {
+            DrawEmptyPile(drawList, basePos, pSize, scale, p.type);
+        } else {
+            bool deferRemaining = false;
+            for (size_t c = 0; c < p.cards.size(); ++c) {
+                if (m_dragSourcePile == (int)i && (int)c >= m_dragCardIndex) continue;
+
+                int drawIndex = (int)c;
+                if (p.type == PileType::Waste && p.cards.size() > 3) {
+                    drawIndex = std::max(0, (int)c - (int)(p.cards.size() - 3));
+                }
+
+                ImVec2 cardPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
+                Card& cardRef = p.cards[c];
+
+                if (!cardRef.hasInitializedPos) {
+                    if (cardsInitializedThisFrame < 2) {
+                        ImVec2 startPos = boardBasePos;
+                        for (const auto& sp : m_piles) {
+                            if (sp.type == PileType::Stock) {
+                                int drawIdx = sp.cards.empty() ? 0 : (int)sp.cards.size() - 1;
+                                startPos = ImVec2(boardBasePos.x + (sp.pos.x + sp.offset.x * drawIdx) * scale, boardBasePos.y + (sp.pos.y + sp.offset.y * drawIdx) * scale);
+                                break;
+                            }
+                        }
+                        cardRef.animPos = startPos;
+                        cardRef.hasInitializedPos = true;
+                        cardRef.flipVisual = -1.0f;
+                        cardsInitializedThisFrame++;
+                    } else {
+                        continue;
+                    }
+                } else {
+                    cardRef.animPos.x += (cardPos.x - cardRef.animPos.x) * animSpeed;
+                    cardRef.animPos.y += (cardPos.y - cardRef.animPos.y) * animSpeed;
+
+                    if (std::abs(cardRef.animPos.x - cardPos.x) > 1.0f || std::abs(cardRef.animPos.y - cardPos.y) > 1.0f) {
+                        cardsAnimating = true;
+                    }
+                }
+
+                float targetFlip = cardRef.faceUp ? 1.0f : -1.0f;
+                if (cardRef.flipVisual < targetFlip) {
+                    cardRef.flipVisual += flipSpeed;
+                    if (cardRef.flipVisual > targetFlip) cardRef.flipVisual = targetFlip;
+                    cardsAnimating = true;
+                } else if (cardRef.flipVisual > targetFlip) {
+                    cardRef.flipVisual -= flipSpeed;
+                    if (cardRef.flipVisual < targetFlip) cardRef.flipVisual = targetFlip;
+                    cardsAnimating = true;
+                }
+
+                bool isMoving = (std::abs(cardRef.animPos.x - cardPos.x) > 1.0f || std::abs(cardRef.animPos.y - cardPos.y) > 1.0f);
+                if (isMoving) {
+                    deferRemaining = true;
+                }
+                
+                if (deferRemaining) {
+                    deferredCards.push_back({&cardRef, pSize, hoveredPile == (int)i && hoveredCard == (int)c});
+                } else {
+                    if (cardRef.flipVisual > 0.0f) {
+                        DrawCard(drawList, cardRef.animPos, pSize, cardRef, scale, cardRef.flipVisual, false, hoveredPile == (int)i && hoveredCard == (int)c);
+                    } else {
+                        DrawCardBack(drawList, cardRef.animPos, pSize, scale, -cardRef.flipVisual, false);
+                    }
+                }
+            }
+        }
+    }
+
+    for (const auto& dc : deferredCards) {
+        if (dc.card->flipVisual > 0.0f) {
+            DrawCard(drawList, dc.card->animPos, dc.size, *dc.card, scale, dc.card->flipVisual, false, dc.isHovered);
+        } else {
+            DrawCardBack(drawList, dc.card->animPos, dc.size, scale, -dc.card->flipVisual, false);
+        }
+    }
+
+    if (m_dragSourcePile != -1 && !m_dragCards.empty()) {
+        ImVec2 dragBasePos = ImVec2(mousePos.x - m_dragOffset.x, mousePos.y - m_dragOffset.y);
+        ImVec2 pSize = ImVec2(CARD_SIZE.x * scale, CARD_SIZE.y * scale);
+        ImVec2 pOffset = ImVec2(m_piles[m_dragSourcePile].offset.x * scale, m_piles[m_dragSourcePile].offset.y * scale);
+
+        ImVec2 pullOffset(0, 0);
+        ImVec2 dragCenter = ImVec2(dragBasePos.x + pSize.x * 0.5f, dragBasePos.y + pSize.y * 0.5f);
+        float maxDist = pSize.x * 1.8f;
 
         for (size_t i = 0; i < m_piles.size(); ++i) {
+            if ((int)i == m_dragSourcePile) continue;
+            
             Pile& p = m_piles[i];
-            ImVec2 basePos = ImVec2(boardBasePos.x + p.pos.x * scale, boardBasePos.y + p.pos.y * scale);
-            ImVec2 pSize = ImVec2(p.size.x * scale, p.size.y * scale);
-            ImVec2 pOffset = ImVec2(p.offset.x * scale, p.offset.y * scale);
-
-            if (p.cards.empty()) {
-                DrawEmptyPile(drawList, basePos, pSize, scale, p.type);
-            } else {
-                bool deferRemaining = false;
-                // Draw cards
-                for (size_t c = 0; c < p.cards.size(); ++c) {
-                    // Skip drawing dragged cards in their original pile
-                    if (m_dragSourcePile == (int)i && (int)c >= m_dragCardIndex) continue;
-
-                    int drawIndex = (int)c;
-                    if (p.type == PileType::Waste && p.cards.size() > 3) {
-                        drawIndex = std::max(0, (int)c - (int)(p.cards.size() - 3));
-                    }
-
-                    ImVec2 cardPos = ImVec2(basePos.x + pOffset.x * drawIndex, basePos.y + pOffset.y * drawIndex);
-                    Card& cardRef = p.cards[c];
-
-                    if (!cardRef.hasInitializedPos) {
-                        if (cardsInitializedThisFrame < 2) {
-                            ImVec2 startPos = boardBasePos;
-                            for (const auto& sp : m_piles) {
-                                if (sp.type == PileType::Stock) {
-                                    int drawIndex = sp.cards.empty() ? 0 : (int)sp.cards.size() - 1;
-                                    startPos = ImVec2(boardBasePos.x + (sp.pos.x + sp.offset.x * drawIndex) * scale, boardBasePos.y + (sp.pos.y + sp.offset.y * drawIndex) * scale);
-                                    break;
-                                }
-                            }
-                            cardRef.animPos = startPos;
-                            cardRef.hasInitializedPos = true;
-                            cardRef.flipVisual = -1.0f;
-                            cardsInitializedThisFrame++;
-                        } else {
-                            continue;
-                        }
-                    } else {
-                        cardRef.animPos.x += (cardPos.x - cardRef.animPos.x) * animSpeed;
-                        cardRef.animPos.y += (cardPos.y - cardRef.animPos.y) * animSpeed;
-
-                        if (std::abs(cardRef.animPos.x - cardPos.x) > 1.0f || std::abs(cardRef.animPos.y - cardPos.y) > 1.0f) {
-                            cardsAnimating = true;
-                        }
-                    }
-
-                    float targetFlip = cardRef.faceUp ? 1.0f : -1.0f;
-                    if (cardRef.flipVisual < targetFlip) {
-                        cardRef.flipVisual += flipSpeed;
-                        if (cardRef.flipVisual > targetFlip) cardRef.flipVisual = targetFlip;
-                        cardsAnimating = true;
-                    } else if (cardRef.flipVisual > targetFlip) {
-                        cardRef.flipVisual -= flipSpeed;
-                        if (cardRef.flipVisual < targetFlip) cardRef.flipVisual = targetFlip;
-                        cardsAnimating = true;
-                    }
-
-                    bool isMoving = (std::abs(cardRef.animPos.x - cardPos.x) > 1.0f || std::abs(cardRef.animPos.y - cardPos.y) > 1.0f);
-                    if (isMoving) {
-                        deferRemaining = true;
-                    }
-                    
-                    if (deferRemaining) {
-                        deferredCards.push_back({&cardRef, pSize, hoveredPile == (int)i && hoveredCard == (int)c});
-                    } else {
-                        if (cardRef.flipVisual > 0.0f) {
-                            DrawCard(drawList, cardRef.animPos, pSize, cardRef, scale, cardRef.flipVisual, false, hoveredPile == (int)i && hoveredCard == (int)c);
-                        } else {
-                            DrawCardBack(drawList, cardRef.animPos, pSize, scale, -cardRef.flipVisual);
-                        }
-                    }
-                }
-            }
-        }
-
-        for (const auto& dc : deferredCards) {
-            if (dc.card->flipVisual > 0.0f) {
-                DrawCard(drawList, dc.card->animPos, dc.size, *dc.card, scale, dc.card->flipVisual, false, dc.isHovered);
-            } else {
-                DrawCardBack(drawList, dc.card->animPos, dc.size, scale, -dc.card->flipVisual);
-            }
-        }
-
-        // 5. Draw Dragged Cards
-        if (m_dragSourcePile != -1 && !m_dragCards.empty()) {
-            ImVec2 dragBasePos = ImVec2(mousePos.x - m_dragOffset.x, mousePos.y - m_dragOffset.y);
-            ImVec2 pSize = ImVec2(CARD_SIZE.x * scale, CARD_SIZE.y * scale);
-            ImVec2 pOffset = ImVec2(m_piles[m_dragSourcePile].offset.x * scale, m_piles[m_dragSourcePile].offset.y * scale);
-
-            // Calculate Magnetic Force
-            ImVec2 pullOffset(0, 0);
-            ImVec2 dragCenter = ImVec2(dragBasePos.x + pSize.x * 0.5f, dragBasePos.y + pSize.y * 0.5f);
-            float maxDist = pSize.x * 1.8f; // Range of magnetic effect
-
-            for (size_t i = 0; i < m_piles.size(); ++i) {
-                if ((int)i == m_dragSourcePile) continue;
-                
-                Pile& p = m_piles[i];
-                int cCount = p.cards.empty() ? 0 : (int)p.cards.size() - 1;
-                int targetDrawIndex = cCount;
-                if (p.type == PileType::Waste && p.cards.size() > 3) {
-                    targetDrawIndex = std::max(0, cCount - (int)(p.cards.size() - 3));
-                }
-                
-                ImVec2 targetPos = ImVec2(boardBasePos.x + p.pos.x * scale + p.offset.x * scale * targetDrawIndex, 
-                                          boardBasePos.y + p.pos.y * scale + p.offset.y * scale * targetDrawIndex);
-                ImVec2 targetCenter = ImVec2(targetPos.x + pSize.x * 0.5f, targetPos.y + pSize.y * 0.5f);
-                
-                float dx = targetCenter.x - dragCenter.x;
-                float dy = targetCenter.y - dragCenter.y;
-                float distSq = dx * dx + dy * dy;
-                
-                if (distSq > 0.0001f && distSq < maxDist * maxDist) {
-                    float dist = std::sqrt(distSq);
-                    bool canDrop = CanDrop(m_dragSourcePile, m_dragCards, (int)i);
-                    float strength = std::pow((maxDist - dist) / maxDist, 2.0f); // Ease-in falloff
-                    
-                    if (canDrop) {
-                        // Magnetic Pull (Snap target)
-                        pullOffset.x += dx * strength * 0.6f;
-                        pullOffset.y += dy * strength * 0.6f;
-                    } else {
-                        // Magnetic Push (Repel invalid target)
-                        pullOffset.x -= (dx / dist) * strength * pSize.x * 0.05f;
-                        pullOffset.y -= (dy / dist) * strength * pSize.x * 0.05f;
-                    }
-                }
+            int cCount = p.cards.empty() ? 0 : (int)p.cards.size() - 1;
+            int targetDrawIndex = cCount;
+            if (p.type == PileType::Waste && p.cards.size() > 3) {
+                targetDrawIndex = std::max(0, cCount - (int)(p.cards.size() - 3));
             }
             
-            dragBasePos.x += pullOffset.x;
-            dragBasePos.y += pullOffset.y;
-
-            for (size_t c = 0; c < m_dragCards.size(); ++c) {
-                // Dynamic sway: bottom cards in a dragged stack lag behind or fan out 
-                // in the direction of the magnetic force, faking a 3D turning/fanning effect.
-                ImVec2 swayOffset(pullOffset.x * 0.08f * c, pullOffset.y * 0.08f * c);
-                ImVec2 cardPos = ImVec2(dragBasePos.x + pOffset.x * c + swayOffset.x, 
-                                        dragBasePos.y + pOffset.y * c + swayOffset.y);
+            ImVec2 targetPos = ImVec2(boardBasePos.x + p.pos.x * scale + p.offset.x * scale * targetDrawIndex, 
+                                      boardBasePos.y + p.pos.y * scale + p.offset.y * scale * targetDrawIndex);
+            ImVec2 targetCenter = ImVec2(targetPos.x + pSize.x * 0.5f, targetPos.y + pSize.y * 0.5f);
+            
+            float dx = targetCenter.x - dragCenter.x;
+            float dy = targetCenter.y - dragCenter.y;
+            float distSq = dx * dx + dy * dy;
+            
+            if (distSq > 0.0001f && distSq < maxDist * maxDist) {
+                float dist = std::sqrt(distSq);
+                bool canDrop = CanDrop(m_dragSourcePile, m_dragCards, (int)i);
+                float strength = std::pow((maxDist - dist) / maxDist, 2.0f);
                 
-                m_dragCards[c].animPos = cardPos;
-                DrawCard(drawList, cardPos, pSize, m_dragCards[c], scale, 1.0f, true);
+                if (canDrop) {
+                    pullOffset.x += dx * strength * 0.6f;
+                    pullOffset.y += dy * strength * 0.6f;
+                } else {
+                    pullOffset.x -= (dx / dist) * strength * pSize.x * 0.05f;
+                    pullOffset.y -= (dy / dist) * strength * pSize.x * 0.05f;
+                }
             }
         }
-    }
+        
+        dragBasePos.x += pullOffset.x;
+        dragBasePos.y += pullOffset.y;
 
-    // Give the Lua script a chance to draw text over the board
-    sol::protected_function drawFunc = m_lua["Draw"];
-    if (drawFunc.valid()) {
-        try {
-            lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
-            sol::protected_function_result result = drawFunc();
-            if (!result.valid()) { sol::error err = result; throw err; }
-            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
-        } catch (const sol::error& e) {
-            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
-            std::cerr << "Lua Error in Draw: " << e.what() << std::endl;
+        for (size_t c = 0; c < m_dragCards.size(); ++c) {
+            ImVec2 swayOffset(pullOffset.x * 0.08f * c, pullOffset.y * 0.08f * c);
+            ImVec2 cardPos = ImVec2(dragBasePos.x + pOffset.x * c + swayOffset.x, 
+                                    dragBasePos.y + pOffset.y * c + swayOffset.y);
+            
+            m_dragCards[c].animPos = cardPos;
+            DrawCard(drawList, cardPos, pSize, m_dragCards[c], scale, 1.0f, true, false);
         }
     }
+    
+    return cardsAnimating;
+}
 
-    // Check Win Condition (Only trigger once cards finish flying)
+void Game::CheckWinCondition(float scale, bool cardsAnimating) {
     if (!m_isWon && !cardsAnimating) {
         sol::protected_function isWonFunc = m_lua["IsWon"];
         if (isWonFunc.valid()) {
@@ -1169,7 +1087,7 @@ void Game::UpdateAndDraw() {
                     m_isWon = true;
                     m_winAnimTimer = 0.0f;
                     
-                    // Spawn explosion particles!
+                    ImVec2 mousePos = ImGui::GetMousePos();
                     for (int i = 0; i < 500; ++i) {
                         Particle p;
                         p.pos = mousePos;
@@ -1192,11 +1110,97 @@ void Game::UpdateAndDraw() {
     }
 
     if (m_isWon && !cardsAnimating) {
-        UpdateWinAnimation(drawList, scale);
+        UpdateWinAnimation(ImGui::GetWindowDrawList(), scale);
     }
 }
 
-// Rendering Helpers
+void Game::UpdateAndDraw() {
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+    float scaleX = ImGui::GetWindowWidth() / 1280.0f;
+    float scaleY = ImGui::GetWindowHeight() / 720.0f;
+    float scale = std::max(0.5f, std::min(scaleX, scaleY));
+
+    ImGui::GetIO().FontGlobalScale = scale;
+
+    RenderMenuBar();
+
+    ImVec2 winPos = ImGui::GetWindowPos();
+    winPos.y += ImGui::GetFrameHeight(); 
+
+    drawList->AddRectFilledMultiColor(winPos, ImVec2(winPos.x + ImGui::GetWindowWidth(), winPos.y + ImGui::GetWindowHeight()), 
+                                      IM_COL32(30, 90, 30, 255), IM_COL32(30, 90, 30, 255), IM_COL32(12, 35, 12, 255), IM_COL32(12, 35, 12, 255));
+
+    bool hasGame = !m_currentScriptPath.empty();
+    if (!hasGame) {
+        RenderStartScreen(drawList, scale);
+        return;
+    }
+
+    RenderInGameMenu(scale);
+
+    float minLogicalX = 999999.0f;
+    float maxLogicalX = -999999.0f;
+    for (const auto& p : m_piles) {
+        if (p.type == PileType::Invisible) continue;
+        float leftEdge = p.pos.x;
+        float rightEdge = p.pos.x + p.size.x;
+        if (p.offset.x > 0) rightEdge += 2 * p.offset.x;
+        else if (p.offset.x < 0) leftEdge += 2 * p.offset.x;
+        
+        if (leftEdge < minLogicalX) minLogicalX = leftEdge;
+        if (rightEdge > maxLogicalX) maxLogicalX = rightEdge;
+    }
+    if (minLogicalX > maxLogicalX) {
+        minLogicalX = 0.0f;
+        maxLogicalX = 1280.0f;
+    }
+
+    float logicalWidth = maxLogicalX - minLogicalX;
+    float boardPixelWidth = logicalWidth * scale;
+    float boardOffsetX = std::max(0.0f, (ImGui::GetWindowWidth() - boardPixelWidth) * 0.5f);
+    
+    ImVec2 boardBasePos = winPos;
+    bool autoCenter = m_lua["AutoCenter"].get_or(true);
+    if (autoCenter) {
+        boardBasePos.x += boardOffsetX - (minLogicalX * scale);
+    }
+
+    s_boardScale = scale;
+    s_boardBasePos = boardBasePos;
+
+    bool isDealing = false;
+    for (const auto& p : m_piles) {
+        for (const auto& c : p.cards) {
+            if (!c.hasInitializedPos) isDealing = true;
+        }
+    }
+
+    int hoveredPile = -1;
+    int hoveredCard = -1;
+
+    if (!isDealing && !m_isWon) {
+        ProcessInput(scale, boardBasePos, hoveredPile, hoveredCard);
+        ProcessAutoSolve();
+    }
+
+    bool cardsAnimating = RenderBoard(drawList, scale, boardBasePos, hoveredPile, hoveredCard);
+
+    sol::protected_function drawFunc = m_lua["Draw"];
+    if (drawFunc.valid()) {
+        try {
+            lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+            sol::protected_function_result result = drawFunc();
+            if (!result.valid()) { sol::error err = result; throw err; }
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+        } catch (const sol::error& e) {
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+            std::cerr << "Lua Error in Draw: " << e.what() << std::endl;
+        }
+    }
+
+    CheckWinCondition(scale, cardsAnimating);
+}
 
 void Game::DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, float scale, PileType type) {
     if (type == PileType::Invisible) return;
