@@ -2,6 +2,8 @@
 GameName = "Example"
 NumDecks = 1
 AutoCenter = false
+CardSize = ImVec2.new(120.0, 120.0) -- Let's make them square!
+CornerRadius = 20.0                 -- Extra round corners
 HelpText = "This is a dummy game demonstrating all available Lua API bindings.\nMove all cards out of the first pile to trigger the win fireworks!"
 
 ButtonClickCount = 0
@@ -15,8 +17,8 @@ function Init(piles, deck)
     -- ==========================================
     local pos1 = ImVec2.new()           -- Default constructor (0,0)
     local pos2 = ImVec2.new(20.0, 60.0) -- Constructor with x, y
-    local pos3 = ImVec2.new(150.0, 60.0)
-    local pos4 = ImVec2.new(300.0, 60.0)
+    local pos3 = ImVec2.new(180.0, 60.0)
+    local pos4 = ImVec2.new(380.0, 60.0)
     pos1.x = 20.0                       -- Modify x property
     pos1.y = 240.0                      -- Modify y property
 
@@ -34,7 +36,7 @@ function Init(piles, deck)
     local p = Pile.new()
     p.id = 0
     p.pos = pos1
-    p.size = ImVec2.new(100.0, 140.0)
+    p.size = CardSize
     p.offset = ImVec2.new(0.0, 25.0)
     
     -- PileType Enum: Stock, Waste, Tableau, Foundation, FreeCellSlot, Invisible
@@ -65,7 +67,7 @@ function Init(piles, deck)
     stock.id = 1
     stock.type = PileType.Stock
     stock.pos = pos2
-    stock.size = ImVec2.new(100.0, 140.0)
+    stock.size = CardSize
     stock.offset = ImVec2.new(0.2, -0.5)
     stock.cards = deck                  -- Reassign entire VectorCard at once
     piles:push_back(stock)
@@ -75,7 +77,7 @@ function Init(piles, deck)
     waste.id = 2
     waste.type = PileType.Waste
     waste.pos = pos3
-    waste.size = ImVec2.new(100.0, 140.0)
+    waste.size = CardSize
     waste.offset = ImVec2.new(20.0, 0.0)
     piles:push_back(waste)
 
@@ -84,7 +86,7 @@ function Init(piles, deck)
     foundation.id = 3
     foundation.type = PileType.Foundation
     foundation.pos = pos4
-    foundation.size = ImVec2.new(100.0, 140.0)
+    foundation.size = CardSize
     foundation.offset = ImVec2.new(0.0, 0.0)
     piles:push_back(foundation)
 end
@@ -166,8 +168,8 @@ function Draw()
     -- DrawBoardText coordinates scale identically to the Pile positioning
     DrawBoardText(20.0, 210.0, "Tableau")
     DrawBoardText(20.0, 10.0, "Stock")
-    DrawBoardText(150.0, 10.0, "Waste")
-    DrawBoardText(300.0, 10.0, "Foundation")
+    DrawBoardText(180.0, 10.0, "Waste")
+    DrawBoardText(380.0, 10.0, "Foundation")
     
     DrawBoardText(20.0, 520.0, "Move all cards from the Tableau to the Foundation to see the fireworks!")
 

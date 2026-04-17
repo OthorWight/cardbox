@@ -324,7 +324,8 @@ void Game::InitGame(const std::string& scriptPath) {
         m_lua.script_file(m_currentScriptPath);
         m_currentGameName = m_lua["GameName"].get_or<std::string>("Unknown Game");
         m_currentHelpText = m_lua["HelpText"].get_or<std::string>("No help available.");
-        m_cardSize = m_lua["CardSize"].get_or(ImVec2(100.0f, 140.0f));
+        sol::optional<ImVec2> cardSizeOpt = m_lua["CardSize"];
+        m_cardSize = cardSizeOpt ? *cardSizeOpt : ImVec2(100.0f, 140.0f);
         m_cornerRadius = m_lua["CornerRadius"].get_or(8.0f);
 
         std::vector<Card> deck;
@@ -558,7 +559,8 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
                     sol::protected_function_result result = initFunc(p.piles, deck);
                     if (!result.valid()) { sol::error err = result; throw err; }
                 }
-                p.cardSize = m_lua["CardSize"].get_or(ImVec2(100.0f, 140.0f));
+            sol::optional<ImVec2> previewCardSizeOpt = m_lua["CardSize"];
+            p.cardSize = previewCardSizeOpt ? *previewCardSizeOpt : ImVec2(100.0f, 140.0f);
                 p.cornerRadius = m_lua["CornerRadius"].get_or(8.0f);
                 lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
                 s_previews.push_back(p);
