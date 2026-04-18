@@ -212,6 +212,11 @@ void Game::SetupLuaBindings() {
         ImGui::PopFont();
         return clicked;
     });
+
+    m_lua.set_function("GetScore", [this]() { return m_score; });
+    m_lua.set_function("AddScore", [this](int points) { m_score += points; });
+    m_lua.set_function("SetScore", [this](int points) { m_score = points; });
+    m_lua.set_function("GetTime", [this]() { return (double)m_gameTime; });
 }
 
 void Game::CreateDeck(std::vector<Card>& deck, int numDecks) {
@@ -313,6 +318,8 @@ void Game::InitGame(const std::string& scriptPath) {
     m_isWon = false;
     m_particles.clear();
     m_winAnimTimer = 0.0f;
+    m_gameTime = 0.0f;
+    m_score = 0;
 
     m_cardSize = ImVec2(DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT);
     m_cornerRadius = DEFAULT_CORNER_RADIUS;
@@ -1244,6 +1251,7 @@ void Game::UpdateAndDraw() {
     int hoveredCard = -1;
 
     if (!isDealing && !m_isWon) {
+        m_gameTime += ImGui::GetIO().DeltaTime;
         ProcessInput(scale, boardBasePos, hoveredPile, hoveredCard);
         ProcessAutoSolve();
     }

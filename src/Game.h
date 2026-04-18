@@ -89,6 +89,10 @@ private:
     std::string m_currentHelpText;
     std::string m_currentScriptPath;
     
+    // Game state
+    float m_gameTime = 0.0f;
+    int m_score = 0;
+
     // Configuration
     ImVec2 m_cardSize = ImVec2(DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT);
     float m_cornerRadius = DEFAULT_CORNER_RADIUS;

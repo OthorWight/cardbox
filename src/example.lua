@@ -117,6 +117,8 @@ function AfterMove(piles, sourcePileIdx, targetPileIdx, cardIdx)
     if not sourcePile.cards:empty() then
         sourcePile.cards:back().faceUp = true
     end
+
+    AddScore(15) -- Gain points for making a successful move
 end
 
 -- Called by C++ when a pile is clicked without dragging (e.g., clicking the Stock pile).
@@ -132,6 +134,7 @@ function HandleClick(piles, pileIdx)
             c.faceUp = true
             waste.cards:push_back(c)
         else
+            AddScore(-5) -- Penalty for recycling the deck
             -- Recycle waste back to stock
             while not waste.cards:empty() do
                 local c = waste.cards:back()
@@ -171,6 +174,11 @@ function Draw()
     DrawBoardText(180.0, 10.0, "Waste")
     DrawBoardText(380.0, 10.0, "Foundation")
     
+    local time = GetTime()
+    local mins = math.floor(time / 60)
+    local secs = math.floor(time % 60)
+    DrawBoardText(20.0, 480.0, string.format("Time: %02d:%02d   Score: %d", mins, secs, GetScore()))
+
     DrawBoardText(20.0, 520.0, "Move all cards from the Tableau to the Foundation to see the fireworks!")
 
     -- DrawBoardButton returns true when clicked
