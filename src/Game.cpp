@@ -607,7 +607,7 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
     ImGui::SetWindowFontScale(2.5f * scale);
     float text_width = ImGui::CalcTextSize("Select a Game").x;
-    ImGui::SetCursorPos(ImVec2((window_width - text_width) * 0.5f, 50.0f * scale + ImGui::GetFrameHeight()));
+    ImGui::SetCursorPos(ImVec2((window_width - text_width) * 0.5f, 0.0f * scale + ImGui::GetFrameHeight()));
     ImGui::TextColored(ImVec4(1, 1, 1, 1), "Select a Game");
     ImGui::SetWindowFontScale(1.0f);
     ImGui::PopFont();
@@ -625,7 +625,7 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
     float expDecay = std::exp(-decayRate * dt);
     if (s_deal_delay > 0.0f) s_deal_delay -= dt;
 
-    ImGui::SetCursorPos(ImVec2(start_x, 150.0f * scale + ImGui::GetFrameHeight()));
+    ImGui::SetCursorPos(ImVec2(start_x, 80.0f * scale + ImGui::GetFrameHeight()));
     int col = 0;
     for (auto& preview : s_previews) {
         ImVec2 cursorPos = ImGui::GetCursorPos();
@@ -765,7 +765,11 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
             ImGui::SetCursorPos(ImVec2(start_x, cursorPos.y + preview_height + padding));
         }
     }
-    ImGui::Dummy(ImVec2(0.0f, 0.0f));
+    
+    if (col != 0) {
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + preview_height);
+    }
+    ImGui::Dummy(ImVec2(0.0f, 50.0f * scale));
 }
 
 void Game::RenderInGameMenu(float scale) {
