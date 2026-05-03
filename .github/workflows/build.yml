@@ -1,0 +1,55 @@
+name: Build and Package
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            name: linux
+          - os: windows-latest
+            name: windows
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgl1-mesa-dev xorg-dev libxkbcommon-dev libwayland-dev
+
+    - name: Configure CMake
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build build --config Release
+
+    - name: Collect Artifacts
+      shell: bash
+      run: |
+        mkdir -p package
+        # Windows MSVC generator puts outputs in a configuration-specific subfolder
+        BIN_DIR=$([[ "$RUNNER_OS" == "Windows" ]] && echo "build/Release" || echo "build")
+        
+        cp $BIN_DIR/solitaire* package/
+        cp -r $BIN_DIR/rules package/
+        cp -r $BIN_DIR/cards package/
+        cp $BIN_DIR/*.dll package/ 2>/dev/null || true
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ImGuiSolitaire-${{ matrix.name }}
+        path: package/

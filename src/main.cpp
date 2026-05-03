@@ -4,6 +4,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "Game.h"
+#include <filesystem>
 
 // --- App Constants ---
 constexpr float BASE_FONT_SIZE = 22.0f;
@@ -18,6 +19,12 @@ static void glfw_error_callback(int error, const char* description) {
 }
 
 int main(int argc, char** argv) {
+    // Ensure the application always looks for assets relative to the executable
+    if (argc > 0) {
+        std::filesystem::path exePath = std::filesystem::absolute(argv[0]).parent_path();
+        std::filesystem::current_path(exePath);
+    }
+
     glfwSetErrorCallback(glfw_error_callback);
     glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
     if (!glfwInit())

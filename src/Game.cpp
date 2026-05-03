@@ -264,14 +264,11 @@ void Game::LoadCardTextures() {
     const char* suits[] = { "hearts", "diamonds", "clubs", "spades" };
     const char* ranks[] = { "ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king" };
 
-    // Robust path resolution since the executable might be run from the project root or the build/ folder
+    // Since main.cpp sets the working directory to the executable's location,
+    // we can reliably just use the local folders.
     std::string baseDir = "cards/";
-    if (std::filesystem::exists("cards")) {
-        baseDir = "cards/";
-    } else if (std::filesystem::exists("build/cards")) {
-        baseDir = "build/cards/";
-    } else if (std::filesystem::exists("../cards")) {
-        baseDir = "../cards/";
+    if (!std::filesystem::exists(baseDir) && std::filesystem::exists("../cards")) {
+        baseDir = "../cards/"; // Optional fallback just in case
     }
 
     auto loadTexture = [](const std::string& path) -> ImTextureID {
