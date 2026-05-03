@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(ImGuiSolitaire C CXX)
+project(cardbox C CXX)
 
 if(POLICY CMP0072)
     cmake_policy(SET CMP0072 NEW)
@@ -93,16 +93,16 @@ set(APP_SOURCES
     src/Game.cpp
 )
 
-add_executable(solitaire ${APP_SOURCES} ${IMGUI_SOURCES})
+add_executable(cardbox ${APP_SOURCES} ${IMGUI_SOURCES})
 
-target_include_directories(solitaire PRIVATE
+target_include_directories(cardbox PRIVATE
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
     ${glfw_SOURCE_DIR}/include
     ${stb_SOURCE_DIR}
 )
 
-target_link_libraries(solitaire PRIVATE
+target_link_libraries(cardbox PRIVATE
     glfw
     OpenGL::GL
     sol2::sol2
@@ -110,13 +110,13 @@ target_link_libraries(solitaire PRIVATE
 )
 
 if (UNIX AND NOT APPLE)
-    target_link_libraries(solitaire PRIVATE dl pthread)
+    target_link_libraries(cardbox PRIVATE dl pthread)
 endif()
 
 # Copy Lua scripts to a rules/ folder next to the executable
 file(GLOB LUA_SCRIPTS "src/*.lua")
-add_custom_command(TARGET solitaire POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:solitaire>/rules
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LUA_SCRIPTS} $<TARGET_FILE_DIR:solitaire>/rules/
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/cards $<TARGET_FILE_DIR:solitaire>/cards
+add_custom_command(TARGET cardbox POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:cardbox>/rules
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LUA_SCRIPTS} $<TARGET_FILE_DIR:cardbox>/rules/
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/cards $<TARGET_FILE_DIR:cardbox>/cards
 )

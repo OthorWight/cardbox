@@ -43,7 +43,7 @@ jobs:
         # Windows MSVC generator puts outputs in a configuration-specific subfolder
         BIN_DIR=$([[ "$RUNNER_OS" == "Windows" ]] && echo "build/Release" || echo "build")
         
-        cp $BIN_DIR/solitaire* package/
+        cp $BIN_DIR/cardbox* package/
         cp -r $BIN_DIR/rules package/
         cp -r $BIN_DIR/cards package/
         cp $BIN_DIR/*.dll package/ 2>/dev/null || true
@@ -51,5 +51,5 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ImGuiSolitaire-${{ matrix.name }}
+        name: cardbox-${{ matrix.name }}
         path: package/
