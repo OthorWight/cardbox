@@ -26,8 +26,17 @@ int main(int argc, char** argv) {
     }
 
     glfwSetErrorCallback(glfw_error_callback);
+    
+    bool glfw_initialized = false;
+#ifdef __linux__
+    // Prefer Wayland on Linux, but gracefully fall back to X11 if unavailable
     glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
-    if (!glfwInit())
+    glfw_initialized = glfwInit() == GLFW_TRUE;
+    if (!glfw_initialized)
+        glfwInitHint(GLFW_PLATFORM, GLFW_ANY_PLATFORM);
+#endif
+
+    if (!glfw_initialized && !glfwInit())
         return 1;
 
     float dpi_scale = 1.0f;
