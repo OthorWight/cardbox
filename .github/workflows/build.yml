@@ -1,55 +1,53 @@
-name: Build and Package
+name: Build
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "master", "main" ]
   pull_request:
-    branches: [ "main", "master" ]
-  workflow_dispatch:
+    branches: [ "master", "main" ]
 
 jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        include:
-          - os: ubuntu-latest
-            name: linux
-          - os: windows-latest
-            name: windows
-
+        os: [windows-latest, ubuntu-latest]
+    
     runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    - name: Install dependencies (Linux)
+    - name: Install Linux Dependencies
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgl1-mesa-dev xorg-dev libxkbcommon-dev libwayland-dev
+        sudo apt-get install -y xorg-dev libwayland-dev libxkbcommon-dev wayland-protocols libgl1-mesa-dev
 
     - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
     - name: Build
-      run: cmake --build build --config Release
+      run: cmake --build build --config Release -j4
 
-    - name: Collect Artifacts
+    - name: Gather Artifacts
       shell: bash
       run: |
-        mkdir -p package
-        # Windows MSVC generator puts outputs in a configuration-specific subfolder
-        BIN_DIR=$([[ "$RUNNER_OS" == "Windows" ]] && echo "build/Release" || echo "build")
+        mkdir -p dist
         
-        cp $BIN_DIR/cardbox* package/
-        cp -r $BIN_DIR/rules package/
-        cp -r $BIN_DIR/cards package/
-        cp $BIN_DIR/*.dll package/ 2>/dev/null || true
+        # Windows CMake outputs to Release/ by default, Unix outputs directly to build/
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          cp build/Release/cardbox.exe dist/ || true
+          cp -r build/Release/rules dist/rules || true
+          cp -r build/Release/cards dist/cards || true
+          find build/Release -maxdepth 1 -name "*.dll" -exec cp {} dist/ \; || true
+        else
+          cp build/cardbox dist/ || true
+          cp -r build/rules dist/rules || true
+          cp -r build/cards dist/cards || true
+        fi
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: cardbox-${{ matrix.name }}
-        path: package/
+        name: cardbox-${{ runner.os }}
+        path: dist/
