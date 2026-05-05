@@ -101,7 +101,8 @@ private:
     bool m_isWon = false;
     float m_winAnimTimer = 0.0f;
     std::vector<Particle> m_particles;
-    void UpdateWinAnimation(ImDrawList* drawList, float scale);
+    void UpdateAndDrawParticles(ImDrawList* drawList, float scale);
+    void SpawnActionParticles(int count, ImVec2 center, ImVec2 size, float scale, bool isBurst);
 
     // Dragging state
     int m_dragSourcePile = -1;
