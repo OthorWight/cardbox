@@ -26,18 +26,9 @@
 #endif
 
 // Helper macros and constants
-const ImU32 COLOR_BG_DARK = IM_COL32(40, 40, 40, 255);
 const ImU32 COLOR_BG_LIGHT = IM_COL32(250, 250, 250, 255);
 const ImU32 COLOR_RED = IM_COL32(220, 50, 50, 255);
 const ImU32 COLOR_BLACK = IM_COL32(30, 30, 30, 255);
-const ImU32 COLOR_BORDER = IM_COL32(100, 100, 100, 255);
-
-// --- UI & Layout Constants ---
-const ImU32 COLOR_EMPTY_PILE_BG = IM_COL32(30, 60, 30, 100);
-const ImU32 COLOR_EMPTY_PILE_BORDER = IM_COL32(50, 100, 50, 150);
-const ImU32 COLOR_EMPTY_PILE_TEXT = IM_COL32(50, 100, 50, 200);
-const ImU32 COLOR_CARD_BACK_FALLBACK = IM_COL32(35, 75, 145, 255);
-const ImU32 COLOR_CARD_HOVER_GLOW = IM_COL32(255, 255, 150, 200);
 
 constexpr float PREVIEW_WIDTH = 300.0f;
 constexpr float PREVIEW_HEIGHT = 250.0f;
@@ -64,6 +55,95 @@ static float s_boardScale = 1.0f;
 static ImVec2 s_boardBasePos(0.0f, 0.0f);
 
 static const size_t MAX_LUA_MEMORY = 10 * 1024 * 1024; // 10 MB memory limit
+
+// Missing or malformed overrides leave the existing color intact. Colors use
+// byte channels in Lua, matching DrawBoardText and DrawBoardPanel.
+static std::optional<ImVec4> ReadThemeColor(const sol::object& object) {
+    if (object.get_type() != sol::type::table) return std::nullopt;
+    sol::table table = object.as<sol::table>();
+    float channels[4] = {0, 0, 0, 1};
+    for (int i = 0; i < 4; ++i) {
+        sol::object value = table.raw_get<sol::object>(i + 1);
+        if (i == 3 && value.get_type() == sol::type::nil) continue;
+        if (value.get_type() != sol::type::number) return std::nullopt;
+        double channel = value.as<double>();
+        if (!std::isfinite(channel)) return std::nullopt;
+        channels[i] = static_cast<float>(std::clamp(channel, 0.0, 255.0)) / 255.0f;
+    }
+    return ImVec4(channels[0], channels[1], channels[2], channels[3]);
+}
+
+class ScopedThemeStyle {
+public:
+    ~ScopedThemeStyle() { Clear(); }
+    void Apply(const std::array<std::optional<ImVec4>, ImGuiCol_COUNT>& colors,
+               std::optional<float> rounding, float scale) {
+        Clear();
+        for (int i = 0; i < ImGuiCol_COUNT; ++i) {
+            if (colors[i]) {
+                ImGui::PushStyleColor(i, *colors[i]);
+                ++m_colorCount;
+            }
+        }
+        if (rounding) {
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, *rounding * scale);
+            m_hasRounding = true;
+        }
+    }
+private:
+    int m_colorCount = 0;
+    bool m_hasRounding = false;
+    void Clear() {
+        if (m_hasRounding) ImGui::PopStyleVar();
+        if (m_colorCount) ImGui::PopStyleColor(m_colorCount);
+        m_hasRounding = false;
+        m_colorCount = 0;
+    }
+};
+
+const Game::WindowTheme& Game::ActiveTheme() const {
+    static const WindowTheme defaults;
+    return m_currentScriptPath.empty() ? defaults : m_theme;
+}
+
+ImVec4 Game::GetBackgroundColor() const {
+    return ImGui::ColorConvertU32ToFloat4(ActiveTheme().background);
+}
+
+void Game::LoadTheme() {
+    m_theme = WindowTheme{};
+    sol::object object = m_lua["Theme"];
+    if (object.get_type() != sol::type::table) return;
+    sol::table theme = object.as<sol::table>();
+    auto color = [&](const char* key, ImU32& target) {
+        auto value = ReadThemeColor(theme.raw_get<sol::object>(key));
+        if (value) target = ImGui::ColorConvertFloat4ToU32(*value);
+    };
+    color("Background", m_theme.background);
+    if (ReadThemeColor(theme.raw_get<sol::object>("Background"))) {
+        m_theme.backgroundBottom = m_theme.background;
+        m_theme.toolbar = m_theme.background;
+    }
+    color("BackgroundBottom", m_theme.backgroundBottom);
+    color("Toolbar", m_theme.toolbar);
+    color("EmptyPile", m_theme.emptyPile);
+    color("EmptyPileBorder", m_theme.emptyPileBorder);
+    color("EmptyPileText", m_theme.emptyPileText);
+    color("CardBack", m_theme.cardBack);
+    color("CardBorder", m_theme.cardBorder);
+    color("CardHover", m_theme.cardHover);
+    sol::object colors = theme.raw_get<sol::object>("Colors");
+    if (colors.get_type() == sol::type::table) {
+        sol::table entries = colors.as<sol::table>();
+        for (int i = 0; i < ImGuiCol_COUNT; ++i) {
+            m_theme.colors[i] = ReadThemeColor(entries.raw_get<sol::object>(ImGui::GetStyleColorName(i)));
+        }
+    }
+    sol::object rounding = theme.raw_get<sol::object>("ButtonRounding");
+    if (rounding.get_type() == sol::type::number && std::isfinite(rounding.as<double>())) {
+        m_theme.buttonRounding = static_cast<float>(std::clamp(rounding.as<double>(), 0.0, 24.0));
+    }
+}
 
 static void* LuaMemoryAllocator(void* ud, void* ptr, size_t osize, size_t nsize) {
     size_t* total_allocated = static_cast<size_t*>(ud);
@@ -179,6 +259,12 @@ void Game::SetupLuaBindings() {
             if (v.empty()) throw std::out_of_range("Cannot pop an empty card vector");
             v.pop_back();
         },
+        "take_back", [](std::vector<Card>& v) -> Card {
+            if (v.empty()) throw std::out_of_range("Cannot take from an empty card vector");
+            Card card = v.back();
+            v.pop_back();
+            return card;
+        },
         "back", [](std::vector<Card>& v) -> Card& {
             if (v.empty()) throw std::out_of_range("Cannot read an empty card vector");
             return v.back();
@@ -206,23 +292,81 @@ void Game::SetupLuaBindings() {
     );
 
     // Expose a text drawing function to Lua
-    m_lua.set_function("DrawBoardText", [](float x, float y, const std::string& text) {
+    m_lua.set_function("DrawBoardText", [](float x, float y, const std::string& text,
+            sol::optional<float> fontSize, sol::optional<float> wrapWidth,
+            sol::optional<int> red, sol::optional<int> green, sol::optional<int> blue) {
         ImDrawList* drawList = ImGui::GetWindowDrawList();
         ImVec2 pos(s_boardBasePos.x + x * s_boardScale, s_boardBasePos.y + y * s_boardScale);
-        float fontSize = 24.0f * s_boardScale; // Scale the font size naturally with the board
-        drawList->AddText(ImGui::GetFont(), fontSize, ImVec2(pos.x + 2.0f, pos.y + 2.0f), IM_COL32(0, 0, 0, 200), text.c_str()); // Drop shadow
-        drawList->AddText(ImGui::GetFont(), fontSize, pos, IM_COL32(255, 255, 255, 255), text.c_str()); // White text
+        float pixels = std::clamp(fontSize.value_or(24.0f), 8.0f, 72.0f) * s_boardScale;
+        float wrap = std::max(0.0f, wrapWidth.value_or(0.0f)) * s_boardScale;
+        ImU32 color = IM_COL32(std::clamp(red.value_or(255), 0, 255),
+            std::clamp(green.value_or(255), 0, 255), std::clamp(blue.value_or(255), 0, 255), 255);
+        drawList->AddText(ImGui::GetFont(), pixels, ImVec2(pos.x + 1.0f, pos.y + 1.0f), IM_COL32(0, 0, 0, 150), text.c_str(), nullptr, wrap);
+        drawList->AddText(ImGui::GetFont(), pixels, pos, color, text.c_str(), nullptr, wrap);
     });
 
-    m_lua.set_function("DrawBoardButton", [](float x, float y, float w, float h, const std::string& label) {
+    m_lua.set_function("DrawBoardPanel", [](float x, float y, float w, float h, int red, int green, int blue, sol::optional<int> alpha) {
+        if (w <= 0 || h <= 0) return;
+        ImVec2 min(s_boardBasePos.x + x * s_boardScale, s_boardBasePos.y + y * s_boardScale);
+        ImVec2 max(min.x + w * s_boardScale, min.y + h * s_boardScale);
+        ImU32 color = IM_COL32(std::clamp(red, 0, 255), std::clamp(green, 0, 255),
+            std::clamp(blue, 0, 255), std::clamp(alpha.value_or(255), 0, 255));
+        ImGui::GetWindowDrawList()->AddRectFilled(min, max, color, 10.0f * s_boardScale);
+    });
+
+    m_lua.set_function("DrawBoardTooltip", [](float x, float y, float w, float h, const std::string& text) {
+        ImVec2 min(s_boardBasePos.x + x * s_boardScale, s_boardBasePos.y + y * s_boardScale);
+        ImVec2 max(min.x + w * s_boardScale, min.y + h * s_boardScale);
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseHoveringRect(min, max)) {
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 24.0f);
+            ImGui::TextUnformatted(text.c_str());
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+    });
+
+    m_lua.set_function("DrawBoardButton", [](float x, float y, float w, float h, const std::string& label, sol::optional<bool> enabled) {
         ImVec2 pos(s_boardBasePos.x + x * s_boardScale, s_boardBasePos.y + y * s_boardScale);
         ImGui::SetCursorScreenPos(pos);
-        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
-        ImGui::SetWindowFontScale(s_boardScale);
+        // Repeated labels belong to different controls. Scope their IDs by
+        // logical position so identity also stays stable when the window resizes.
+        const ImVec2 logicalPos(x, y);
+        ImGui::PushID(static_cast<int>(ImHashData(&logicalPos, sizeof(logicalPos))));
+        // FontScaleMain already includes board scaling. Fit longer labels to
+        // their button instead of multiplying the font by that scale again.
+        float fontSize = 22.0f;
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0], fontSize);
+        const ImVec2 padding = ImGui::GetStyle().FramePadding;
+        // Remeasure after resizing: hinted glyph advances and ImGui's rounded
+        // pixel sizes do not scale exactly in proportion to the requested size.
+        for (int attempt = 0; attempt < 4; ++attempt) {
+            const ImVec2 textSize = ImGui::CalcTextSize(label.c_str(), nullptr, true);
+            float fit = std::min(
+                std::max(1.0f, w * s_boardScale - 2 * padding.x - 2 * s_boardScale) / std::max(1.0f, textSize.x),
+                std::max(1.0f, h * s_boardScale - 2 * padding.y) / std::max(1.0f, textSize.y));
+            if (fit >= 1.0f) break;
+            fontSize *= std::min(fit, 0.95f);
+            ImGui::PopFont();
+            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0], fontSize);
+        }
+        ImGui::BeginDisabled(!enabled.value_or(true));
         bool clicked = ImGui::Button(label.c_str(), ImVec2(w * s_boardScale, h * s_boardScale));
-        ImGui::SetWindowFontScale(1.0f);
+        ImGui::EndDisabled();
         ImGui::PopFont();
+        ImGui::PopID();
         return clicked;
+    });
+
+    // Run button actions after Draw returns so snapshots never replace a board
+    // while the script is still drawing it.
+    m_lua.set_function("PerformAction", [this](const std::string& action) {
+        if (m_pendingAction.empty() && !m_isWon) m_pendingAction = action;
+    });
+    m_lua.set_function("EmitBoardParticles", [this](float x, float y, float w, float h) {
+        if (!ImGui::GetCurrentContext() || !ImGui::GetCurrentWindowRead()) return;
+        ImVec2 center(s_boardBasePos.x + x * s_boardScale, s_boardBasePos.y + y * s_boardScale);
+        SpawnActionParticles(center, ImVec2(w * s_boardScale, h * s_boardScale), s_boardScale);
     });
 
     m_lua.set_function("GetScore", [this]() { return m_score; });
@@ -321,6 +465,7 @@ void Game::LoadCardTextures() {
 
 void Game::InitGame(const std::string& scriptPath) {
     m_currentScriptPath = scriptPath;
+    m_pendingAction.clear();
     m_piles.clear();
     m_dragSourcePile = -1;
     m_dragCardIndex = -1;
@@ -334,6 +479,7 @@ void Game::InitGame(const std::string& scriptPath) {
 
     m_cardSize = ImVec2(DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT);
     m_cornerRadius = DEFAULT_CORNER_RADIUS;
+    m_theme = WindowTheme{};
     s_previews.clear();
     s_previews_loaded = false;
 
@@ -346,6 +492,7 @@ void Game::InitGame(const std::string& scriptPath) {
         m_lua["Init"] = sol::lua_nil;
         m_lua["CardSize"] = sol::lua_nil;
         m_lua["CornerRadius"] = sol::lua_nil;
+        m_lua["Theme"] = sol::lua_nil;
         m_lua["CanPickup"] = sol::lua_nil;
         m_lua["CanDrop"] = sol::lua_nil;
         m_lua["AfterMove"] = sol::lua_nil;
@@ -353,6 +500,10 @@ void Game::InitGame(const std::string& scriptPath) {
         m_lua["AutoSolve"] = sol::lua_nil;
         m_lua["IsWon"] = sol::lua_nil;
         m_lua["Draw"] = sol::lua_nil;
+        m_lua["DrawBackground"] = sol::lua_nil;
+        m_lua["HandleAction"] = sol::lua_nil;
+        m_lua["SaveState"] = sol::lua_nil;
+        m_lua["LoadState"] = sol::lua_nil;
 
         lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
         m_lua.script_file(m_currentScriptPath, sol::load_mode::text);
@@ -373,11 +524,13 @@ void Game::InitGame(const std::string& scriptPath) {
             if (!result.valid()) { sol::error err = result; throw err; }
         }
         lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+        LoadTheme();
     } catch (const std::exception& e) {
         lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
         std::cerr << "Lua Error during InitGame: " << e.what() << std::endl;
         m_piles.clear();
         m_currentScriptPath.clear();
+        m_theme = WindowTheme{};
     }
 }
 
@@ -459,40 +612,46 @@ void Game::DoMove(int sourcePileIdx, int targetPileIdx, int cardIdx) {
 }
 
 void Game::HandleClick(int pileIdx) {
-    if (pileIdx < 0 || pileIdx >= m_piles.size()) return;
-    
-    // Deep copy state just in case the click mutates it
-    auto backup = m_piles;
-    int backupScore = m_score;
-    
-    sol::protected_function handleClick = m_lua["HandleClick"];
-    if (handleClick.valid()) {
-        try {
-            lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
-            sol::protected_function_result result = handleClick(m_piles, pileIdx);
-            if (!result.valid()) { sol::error err = result; throw err; }
-            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
-        } catch (const sol::error& e) {
-            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
-            std::cerr << "Lua Error in HandleClick: " << e.what() << std::endl;
-        }
-        
-        // Automatically save to undo stack if the Lua script changed the board state
-        bool changed = m_score != backupScore;
-        if (m_piles.size() != backup.size()) changed = true;
-        else {
-            for (size_t i = 0; i < m_piles.size(); ++i) {
-                if (m_piles[i].cards.size() != backup[i].cards.size()) { changed = true; break; }
-                for (size_t c = 0; c < m_piles[i].cards.size(); ++c) {
-                    if (m_piles[i].cards[c].faceUp != backup[i].cards[c].faceUp || m_piles[i].cards[c].suit != backup[i].cards[c].suit || m_piles[i].cards[c].rank != backup[i].cards[c].rank) { changed = true; break; }
-                }
-                if (changed) break;
-            }
-        }
-        if (changed) {
-            m_undoStack.push_back({std::move(backup), backupScore});
-            m_redoStack.clear();
-        }
+    if (pileIdx < 0 || pileIdx >= (int)m_piles.size()) return;
+    HandleScriptAction("HandleClick", sol::make_object(m_lua, pileIdx));
+}
+
+void Game::HandleAction(const std::string& action) {
+    HandleScriptAction("HandleAction", sol::make_object(m_lua, action));
+}
+
+void Game::HandleScriptAction(const char* callback, const sol::object& argument) {
+    sol::protected_function function = m_lua[callback];
+    if (!function.valid()) return;
+    SavedState backup = CaptureState();
+    try {
+        lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug*) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+        sol::protected_function_result result = function(m_piles, argument);
+        lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+        if (!result.valid()) { sol::error error = result; throw error; }
+    } catch (const sol::error& error) {
+        lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+        std::cerr << "Lua Error in " << callback << ": " << error.what() << std::endl;
+        RestoreState(std::move(backup));
+        return;
+    }
+    if (StateChanged(backup)) {
+        m_undoStack.push_back(std::move(backup));
+        m_redoStack.clear();
+    }
+}
+
+void Game::DrawScriptLayer(const char* callback) {
+    sol::protected_function function = m_lua[callback];
+    if (!function.valid()) return;
+    try {
+        lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug*) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+        sol::protected_function_result result = function();
+        lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+        if (!result.valid()) { sol::error error = result; throw error; }
+    } catch (const sol::error& error) {
+        lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+        std::cerr << "Lua Error in " << callback << ": " << error.what() << std::endl;
     }
 }
 
@@ -588,6 +747,7 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
                 m_lua["Init"] = sol::lua_nil;
                 m_lua["CardSize"] = sol::lua_nil;
                 m_lua["CornerRadius"] = sol::lua_nil;
+                m_lua["Theme"] = sol::lua_nil;
 
                 lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
                 m_lua.script_file(path, sol::load_mode::text);
@@ -794,8 +954,10 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
 void Game::RenderInGameMenu(float scale) {
     ImGui::SetCursorPos(ImVec2(10.0f * scale, 0.0f));
     ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 0));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(255, 255, 255, 50));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(255, 255, 255, 100));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ActiveTheme().colors[ImGuiCol_HeaderHovered]
+        .value_or(ImVec4(1, 1, 1, 50.0f / 255)));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ActiveTheme().colors[ImGuiCol_HeaderActive]
+        .value_or(ImVec4(1, 1, 1, 100.0f / 255)));
     
     if (ImGui::ArrowButton("##BackToStart", ImGuiDir_Left)) {
         m_currentScriptPath.clear();
@@ -1257,13 +1419,22 @@ void Game::UpdateAndDraw() {
     // Factor out the OS scaling to let ImGui native dynamic DPI handle crisp rendering of sizes
     ImGui::GetStyle().FontScaleMain = scale / ImGui::GetMainViewport()->DpiScale;
 
+    ScopedThemeStyle themeStyle;
+    themeStyle.Apply(ActiveTheme().colors, ActiveTheme().buttonRounding, scale);
     RenderMenuBar();
+    // Menu actions can switch games. Reapply the palette before drawing the board.
+    themeStyle.Apply(ActiveTheme().colors, ActiveTheme().buttonRounding, scale);
 
     ImVec2 winPos = ImGui::GetWindowPos();
-    winPos.y += ImGui::GetFrameHeight(); 
+    winPos.y += ImGui::GetFrameHeight();
 
-    drawList->AddRectFilledMultiColor(winPos, ImVec2(winPos.x + ImGui::GetWindowWidth(), winPos.y + ImGui::GetWindowHeight()), 
-                                      IM_COL32(30, 90, 30, 255), IM_COL32(30, 90, 30, 255), IM_COL32(12, 35, 12, 255), IM_COL32(12, 35, 12, 255));
+    // Cover the whole client area, including the menu margin and toolbar;
+    // the board window itself is transparent and may begin below the menu.
+    const auto& theme = ActiveTheme();
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImVec2 viewportEnd(viewport->Pos.x + viewport->Size.x, viewport->Pos.y + viewport->Size.y);
+    ImGui::GetBackgroundDrawList(viewport)->AddRectFilledMultiColor(viewport->Pos, viewportEnd,
+        theme.background, theme.background, theme.backgroundBottom, theme.backgroundBottom);
 
     bool hasGame = !m_currentScriptPath.empty();
     if (!hasGame) {
@@ -1272,7 +1443,14 @@ void Game::UpdateAndDraw() {
         return;
     }
 
+    drawList->AddRectFilled(ImGui::GetWindowPos(),
+        ImVec2(winPos.x + ImGui::GetWindowWidth(), winPos.y), theme.toolbar);
     RenderInGameMenu(scale);
+    themeStyle.Apply(ActiveTheme().colors, ActiveTheme().buttonRounding, scale);
+    if (m_currentScriptPath.empty()) {
+        m_particleSystem.Clear();
+        return;
+    }
 
     float minLogicalX = 999999.0f;
     float maxLogicalX = -999999.0f;
@@ -1320,19 +1498,13 @@ void Game::UpdateAndDraw() {
         ProcessAutoSolve();
     }
 
+    DrawScriptLayer("DrawBackground");
     bool cardsAnimating = RenderBoard(drawList, scale, boardBasePos, hoveredPile, hoveredCard);
-
-    sol::protected_function drawFunc = m_lua["Draw"];
-    if (drawFunc.valid()) {
-        try {
-            lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
-            sol::protected_function_result result = drawFunc();
-            if (!result.valid()) { sol::error err = result; throw err; }
-            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
-        } catch (const sol::error& e) {
-            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
-            std::cerr << "Lua Error in Draw: " << e.what() << std::endl;
-        }
+    DrawScriptLayer("Draw");
+    if (!m_pendingAction.empty()) {
+        std::string action = std::move(m_pendingAction);
+        m_pendingAction.clear();
+        if (!isDealing && !m_isWon) HandleAction(action);
     }
 
     CheckWinCondition(scale, cardsAnimating);
@@ -1344,12 +1516,12 @@ void Game::DrawEmptyPile(ImDrawList* drawList, const ImVec2& pos, const ImVec2& 
     if (type == PileType::Invisible) return;
 
     float r = cornerRadius * scale;
-    drawList->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), COLOR_EMPTY_PILE_BG, r);
-    drawList->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y), COLOR_EMPTY_PILE_BORDER, r, 0, 2.0f * scale);
+    drawList->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), ActiveTheme().emptyPile, r);
+    drawList->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y), ActiveTheme().emptyPileBorder, r, 0, 2.0f * scale);
 
     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
         float fontSize = 44.0f * scale; // Base 22.0f * 2.0f
-    ImU32 textColor = COLOR_EMPTY_PILE_TEXT;
+    ImU32 textColor = ActiveTheme().emptyPileText;
 
     if (type == PileType::Foundation) {
         ImVec2 tsize = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, "A");
@@ -1390,7 +1562,7 @@ void Game::DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& s
         drawList->AddImageRounded(m_cardBackTexture, pMin, pMax, ImVec2(uvX0, 0), ImVec2(uvX1, 1), IM_COL32_WHITE, r);
     } else {
         // Nicer Fallback Background (Casino Blue with inset border)
-        drawList->AddRectFilled(pMin, pMax, COLOR_CARD_BACK_FALLBACK, r);
+        drawList->AddRectFilled(pMin, pMax, ActiveTheme().cardBack, r);
         
         if (widthScale > 0.05f) {
             drawList->AddRect(ImVec2(pMin.x + 6.0f * scale, pMin.y + 6.0f * scale), ImVec2(pMax.x - 6.0f * scale, pMax.y - 6.0f * scale), IM_COL32(255, 255, 255, 100), r * 0.5f, 0, 1.5f * scale);
@@ -1398,7 +1570,7 @@ void Game::DrawCardBack(ImDrawList* drawList, const ImVec2& pos, const ImVec2& s
     }
 
     // Border
-    drawList->AddRect(pMin, pMax, COLOR_BORDER, r, 0, 1.0f * scale);
+    drawList->AddRect(pMin, pMax, ActiveTheme().cardBorder, r, 0, 1.0f * scale);
 }
 
 void Game::DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, const Card& card, float scale, float cornerRadius, float widthScale, bool isDragged, bool isHovered) {
@@ -1463,11 +1635,11 @@ void Game::DrawCard(ImDrawList* drawList, const ImVec2& pos, const ImVec2& size,
     }
 
     // Border
-    drawList->AddRect(pMin, pMax, COLOR_BORDER, r, 0, 1.0f * scale);
+    drawList->AddRect(pMin, pMax, ActiveTheme().cardBorder, r, 0, 1.0f * scale);
     
     // Hover Glow
     if (isHovered && !isDragged) {
-        drawList->AddRect(pMin, pMax, COLOR_CARD_HOVER_GLOW, r, 0, 3.0f * scale);
+        drawList->AddRect(pMin, pMax, ActiveTheme().cardHover, r, 0, 3.0f * scale);
     }
 }
 
@@ -1548,35 +1720,75 @@ void Game::UpdateAndDrawParticles(ImDrawList* drawList, float scale) {
     m_particleSystem.Draw(drawList, view);
 }
 
+Game::SavedState Game::CaptureState() {
+    SavedState state{m_piles, m_score, std::nullopt};
+    sol::protected_function save = m_lua["SaveState"];
+    sol::protected_function load = m_lua["LoadState"];
+    if (save.valid() && load.valid()) {
+        try {
+            lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug*) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+            sol::protected_function_result result = save();
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+            if (!result.valid()) { sol::error error = result; throw error; }
+            if (result.get_type() == sol::type::string) state.scriptState = result.get<std::string>();
+        } catch (const sol::error& error) {
+            lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+            std::cerr << "Lua Error in SaveState: " << error.what() << std::endl;
+        }
+    }
+    return state;
+}
+
+bool Game::StateChanged(const SavedState& before) {
+    if (m_score != before.score || m_piles.size() != before.piles.size()) return true;
+    for (size_t i = 0; i < m_piles.size(); ++i) {
+        if (m_piles[i].cards != before.piles[i].cards) return true;
+    }
+    return before.scriptState != CaptureState().scriptState;
+}
+
+void Game::RestoreState(SavedState state) {
+    m_piles = std::move(state.piles);
+    m_score = state.score;
+    if (state.scriptState) {
+        sol::protected_function load = m_lua["LoadState"];
+        if (load.valid()) {
+            try {
+                lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug*) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+                sol::protected_function_result result = load(m_piles, *state.scriptState);
+                lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+                if (!result.valid()) { sol::error error = result; throw error; }
+            } catch (const sol::error& error) {
+                lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
+                std::cerr << "Lua Error in LoadState: " << error.what() << std::endl;
+            }
+        }
+    }
+    m_pendingAction.clear();
+    m_dragSourcePile = -1;
+    m_dragCardIndex = -1;
+    m_dragCards.clear();
+    m_isWon = false;
+    m_particleSystem.Clear();
+}
+
 void Game::SaveStateForUndo() {
-    m_undoStack.push_back({m_piles, m_score});
+    m_undoStack.push_back(CaptureState());
     m_redoStack.clear();
 }
 
 void Game::Undo() {
     if (m_undoStack.empty()) return;
-    m_redoStack.push_back({m_piles, m_score});
-    m_piles = std::move(m_undoStack.back().piles);
-    m_score = m_undoStack.back().score;
+    m_redoStack.push_back(CaptureState());
+    SavedState state = std::move(m_undoStack.back());
     m_undoStack.pop_back();
-    
-    m_dragSourcePile = -1;
-    m_dragCardIndex = -1;
-    m_dragCards.clear();
-    m_isWon = false;
-    m_particleSystem.Clear();
+    RestoreState(std::move(state));
 }
 
 void Game::Redo() {
     if (m_redoStack.empty()) return;
-    m_undoStack.push_back({m_piles, m_score});
-    m_piles = std::move(m_redoStack.back().piles);
-    m_score = m_redoStack.back().score;
+    m_undoStack.push_back(CaptureState());
+    SavedState state = std::move(m_redoStack.back());
     m_redoStack.pop_back();
-    
-    m_dragSourcePile = -1;
-    m_dragCardIndex = -1;
-    m_dragCards.clear();
-    m_isWon = false;
-    m_particleSystem.Clear();
+    RestoreState(std::move(state));
 }

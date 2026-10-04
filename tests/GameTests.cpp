@@ -32,6 +32,7 @@ struct GameTestAccess {
                 assert(not ok, "invalid operation should fail")
             end
             fails(function() cards:pop_back() end)
+            fails(function() cards:take_back() end)
             fails(function() cards:back() end)
             fails(function() cards:front() end)
             fails(function() cards:get(0) end)
@@ -55,6 +56,10 @@ struct GameTestAccess {
             assert(cards:back().rank == 13)
             cards:pop_back()
             assert(cards:empty())
+            cards:push_back(c)
+            local taken = cards:take_back()
+            c.rank = 2
+            assert(cards:empty() and taken.rank == 13 and taken.suit == 3)
         )");
         for (int count : {0, -1, 9, 1000000}) {
             bool rejected = false;
@@ -148,6 +153,57 @@ struct GameTestAccess {
         Require(game.m_currentScriptPath.empty() && game.m_piles.empty(), "failed initialization left an active game");
     }
 
+    static void TestThemes() {
+        Game game(false);
+        const auto defaults = game.ActiveTheme();
+        game.m_currentScriptPath = "theme-test.lua";
+        RunScript(game, R"(
+            Theme = {
+                Background = {18, 22, 30}, Toolbar = {25, 30, 40},
+                EmptyPile = {10, 20, 30, 80}, CardBack = {-50, 100, 500},
+                ButtonRounding = 7,
+                Colors = {Text = {240, 230, 220}, Button = {40, 50, 60, 150},
+                          BorderShadow = {0, 0, 0, 0}, UnknownColor = {1, 2, 3}}
+            }
+        )");
+        game.LoadTheme();
+        Require(game.m_theme.background == IM_COL32(18, 22, 30, 255), "Lua background ignored");
+        Require(game.m_theme.backgroundBottom == game.m_theme.background, "solid background retained green gradient");
+        Require(game.m_theme.toolbar == IM_COL32(25, 30, 40, 255), "toolbar override ignored");
+        Require(game.m_theme.emptyPile == IM_COL32(10, 20, 30, 80), "pile alpha ignored");
+        Require(game.m_theme.cardBack == IM_COL32(0, 100, 255, 255), "theme channels not clamped");
+        Require(game.m_theme.buttonRounding == 7, "button rounding ignored");
+        Require(game.m_theme.colors[ImGuiCol_Text] && game.m_theme.colors[ImGuiCol_Text]->w == 1,
+            "RGB theme color was not opaque");
+        Require(game.m_theme.colors[ImGuiCol_BorderShadow]->w == 0, "transparent theme color ignored");
+        Require(!game.m_theme.colors[ImGuiCol_PopupBg], "partial theme changed unspecified color");
+        Require(ImGui::ColorConvertFloat4ToU32(game.GetBackgroundColor()) == game.m_theme.background,
+            "renderer clear color does not follow theme");
+        game.m_currentScriptPath.clear();
+        Require(game.ActiveTheme().background == defaults.background, "launcher retained game theme");
+
+        RunScript(game, R"(
+            Theme = {Background = {1, 'bad', 3}, BackgroundBottom = {1, 2},
+                     Toolbar = false, EmptyPile = {0/0, 2, 3}, CardBack = 'bad',
+                     ButtonRounding = 'bad', Colors = {Button = {2, 3, math.huge}}}
+        )");
+        game.LoadTheme();
+        Require(game.m_theme.background == defaults.background && game.m_theme.backgroundBottom == defaults.backgroundBottom &&
+            game.m_theme.toolbar == defaults.toolbar && game.m_theme.emptyPile == defaults.emptyPile &&
+            game.m_theme.cardBack == defaults.cardBack && !game.m_theme.buttonRounding &&
+            !game.m_theme.colors[ImGuiCol_Button], "malformed theme did not retain defaults");
+
+        game.InitGame("src/dungeon.lua");
+        Require(game.ActiveTheme().background != defaults.background, "Crawler theme was not loaded");
+        game.InitGame("src/example.lua");
+        Require(game.ActiveTheme().background == defaults.background && !game.m_theme.colors[ImGuiCol_Button],
+            "theme leaked into unthemed game");
+        RunScript(game, "assert(Theme == nil, 'Theme global leaked across game switch')");
+        game.InitGame("src/dungeon.lua");
+        game.InitGame("src/does-not-exist.lua");
+        Require(game.ActiveTheme().background == defaults.background, "failed load retained previous theme");
+    }
+
     static void TestAllocatorIsolation() {
         Game first(false);
         size_t firstMemory = first.m_luaAllocatedMemory;
@@ -175,6 +231,7 @@ int main() {
         GameTestAccess::TestBindings();
         GameTestAccess::TestMovesAndHistory();
         GameTestAccess::TestGames();
+        GameTestAccess::TestThemes();
         GameTestAccess::TestAllocatorIsolation();
         std::cout << "Cardbox engine regressions passed\n";
         return 0;

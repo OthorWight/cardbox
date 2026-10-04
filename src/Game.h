@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <string>
+#include <optional>
+#include <array>
 #include "imgui.h"
 #include "ParticleSystem.h"
 
@@ -74,9 +76,11 @@ public:
     void InitGame(const std::string& scriptPath);
     void UpdateAndDraw();
     bool IsWon() const;
+    ImVec4 GetBackgroundColor() const;
 
 private:
     friend struct GameTestAccess;
+    friend struct DungeonTestAccess;
     // Must outlive the Lua state whose allocator references it.
     size_t m_luaAllocatedMemory = 0;
     sol::state m_lua;
@@ -85,6 +89,7 @@ private:
     std::string m_currentGameName;
     std::string m_currentHelpText;
     std::string m_currentScriptPath;
+    std::string m_pendingAction;
     
     // Game state
     float m_gameTime = 0.0f;
@@ -93,6 +98,23 @@ private:
     // Configuration
     ImVec2 m_cardSize = ImVec2(DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT);
     float m_cornerRadius = DEFAULT_CORNER_RADIUS;
+
+    struct WindowTheme {
+        ImU32 background = IM_COL32(30, 90, 30, 255);
+        ImU32 backgroundBottom = IM_COL32(12, 35, 12, 255);
+        ImU32 toolbar = IM_COL32(51, 102, 51, 255);
+        ImU32 emptyPile = IM_COL32(30, 60, 30, 100);
+        ImU32 emptyPileBorder = IM_COL32(50, 100, 50, 150);
+        ImU32 emptyPileText = IM_COL32(50, 100, 50, 200);
+        ImU32 cardBack = IM_COL32(35, 75, 145, 255);
+        ImU32 cardBorder = IM_COL32(100, 100, 100, 255);
+        ImU32 cardHover = IM_COL32(255, 255, 150, 200);
+        std::array<std::optional<ImVec4>, ImGuiCol_COUNT> colors{};
+        std::optional<float> buttonRounding;
+    };
+    WindowTheme m_theme;
+    void LoadTheme();
+    const WindowTheme& ActiveTheme() const;
     
     // Win state
     bool m_isWon = false;
@@ -110,10 +132,14 @@ private:
     struct SavedState {
         std::vector<Pile> piles;
         int score;
+        std::optional<std::string> scriptState;
     };
     std::vector<SavedState> m_undoStack;
     std::vector<SavedState> m_redoStack;
     void SaveStateForUndo();
+    SavedState CaptureState();
+    void RestoreState(SavedState state);
+    bool StateChanged(const SavedState& before);
     void Undo();
     void Redo();
 
@@ -127,6 +153,9 @@ private:
     bool CanDrop(int sourcePileIdx, const std::vector<Card>& cards, int targetPileIdx);
     void DoMove(int sourcePileIdx, int targetPileIdx, int cardIdx);
     void HandleClick(int pileIdx); // For things like stock pile clicking
+    void HandleAction(const std::string& action);
+    void HandleScriptAction(const char* callback, const sol::object& argument);
+    void DrawScriptLayer(const char* callback);
     
     // Refactored UpdateAndDraw helpers
     void RenderMenuBar();

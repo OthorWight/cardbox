@@ -8,10 +8,6 @@
 
 // --- App Constants ---
 constexpr float BASE_FONT_SIZE = 22.0f;
-constexpr float BG_COLOR_R = 0.2f;
-constexpr float BG_COLOR_G = 0.4f;
-constexpr float BG_COLOR_B = 0.2f;
-constexpr float BG_COLOR_A = 1.0f;
 
 // Error callback for GLFW
 static void glfw_error_callback(int error, const char* description) {
@@ -117,7 +113,8 @@ int main(int argc, char** argv) {
             glfwGetFramebufferSize(window, &display_w, &display_h);
             glViewport(0, 0, display_w, display_h);
         
-            glClearColor(BG_COLOR_R, BG_COLOR_G, BG_COLOR_B, BG_COLOR_A); // Green felt color
+            const ImVec4 background = game.GetBackgroundColor();
+            glClearColor(background.x, background.y, background.z, background.w);
             glClear(GL_COLOR_BUFFER_BIT);
         
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

@@ -122,6 +122,10 @@ if(BUILD_TESTING)
     add_executable(particle_tests tests/ParticleTests.cpp)
     target_link_libraries(particle_tests PRIVATE cardbox_engine)
     add_test(NAME cardbox_particles COMMAND particle_tests)
+    add_executable(dungeon_tests tests/DungeonTests.cpp)
+    target_link_libraries(dungeon_tests PRIVATE cardbox_engine)
+    add_test(NAME cardbox_dungeon COMMAND dungeon_tests)
+    set_tests_properties(cardbox_dungeon PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
 # Copy Lua scripts to a rules/ folder next to the executable
@@ -131,3 +135,12 @@ add_custom_command(TARGET cardbox POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LUA_SCRIPTS} $<TARGET_FILE_DIR:cardbox>/rules/
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/cards $<TARGET_FILE_DIR:cardbox>/cards
 )
+
+# Lua-only edits do not relink the executable, so refresh rules on every normal
+# build as well. Run after cardbox to avoid racing its initial asset copy.
+add_custom_target(cardbox_rules ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:cardbox>/rules
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LUA_SCRIPTS} $<TARGET_FILE_DIR:cardbox>/rules/
+    DEPENDS ${LUA_SCRIPTS}
+)
+add_dependencies(cardbox_rules cardbox)
