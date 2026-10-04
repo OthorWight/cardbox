@@ -7,6 +7,9 @@ Cardbox is a lightweight, scriptable Solitaire and card game engine built in C++
 * **Scriptable Games**: Write your own card games using simple Lua scripts.
 * **Smooth UI**: Fast, responsive, and animated card movements.
 * **Quality of Life**: Built-in undo/redo stack, smart drag-and-drop with magnetic snapping, and auto-solve mechanics.
+* **Particle Effects**: Soft move sparkles, motion-driven drag trails, and timed
+  victory confetti with tumbling card suits. A separate particle system handles
+  fixed-step physics, DPI scaling, and a reusable buffer capped at 1,024 particles.
 
 ## Dependencies
 

@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include "imgui.h"
+#include "ParticleSystem.h"
 
 #if defined(__GNUC__) && __GNUC__ >= 15
 #pragma GCC diagnostic push
@@ -58,14 +59,6 @@ struct Pile {
     }
 };
 
-struct Particle {
-    ImVec2 pos;
-    ImVec2 velocity;
-    ImU32 color;
-    float life;
-    float size;
-};
-
 class Game {
 public:
     // --- Core Dimension Constants ---
@@ -103,10 +96,9 @@ private:
     
     // Win state
     bool m_isWon = false;
-    float m_winAnimTimer = 0.0f;
-    std::vector<Particle> m_particles;
+    ParticleSystem m_particleSystem;
     void UpdateAndDrawParticles(ImDrawList* drawList, float scale);
-    void SpawnActionParticles(int count, ImVec2 center, ImVec2 size, float scale, bool isBurst);
+    void SpawnActionParticles(ImVec2 center, ImVec2 size, float scale);
 
     // Dragging state
     int m_dragSourcePile = -1;

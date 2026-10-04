@@ -328,8 +328,7 @@ void Game::InitGame(const std::string& scriptPath) {
     m_undoStack.clear();
     m_redoStack.clear();
     m_isWon = false;
-    m_particles.clear();
-    m_winAnimTimer = 0.0f;
+    m_particleSystem.Clear();
     m_gameTime = 0.0f;
     m_score = 0;
 
@@ -911,7 +910,7 @@ void Game::ProcessInput(float scale, const ImVec2& boardBasePos, int& outHovered
                                       boardBasePos.y + tp.pos.y * scale + tp.offset.y * scale * tDrawIndex);
             ImVec2 targetSize = ImVec2(m_cardSize.x * scale, m_cardSize.y * scale);
             ImVec2 targetCenter = ImVec2(targetPos.x + targetSize.x * 0.5f, targetPos.y + targetSize.y * 0.5f);
-            SpawnActionParticles(20, targetCenter, targetSize, scale, true);
+            SpawnActionParticles(targetCenter, targetSize, scale);
         } else {
             Pile& sp = m_piles[m_dragSourcePile];
             for (size_t i = 0; i < m_dragCards.size(); ++i) {
@@ -959,7 +958,7 @@ void Game::ProcessInput(float scale, const ImVec2& boardBasePos, int& outHovered
                                           boardBasePos.y + tp.pos.y * scale + tp.offset.y * scale * tDrawIndex);
                 ImVec2 targetSize = ImVec2(m_cardSize.x * scale, m_cardSize.y * scale);
                 ImVec2 targetCenter = ImVec2(targetPos.x + targetSize.x * 0.5f, targetPos.y + targetSize.y * 0.5f);
-                SpawnActionParticles(20, targetCenter, targetSize, scale, true);
+                SpawnActionParticles(targetCenter, targetSize, scale);
             }
         }
     }
@@ -1207,7 +1206,10 @@ bool Game::RenderBoard(ImDrawList* drawList, float scale, const ImVec2& boardBas
 
         ImVec2 stackSize = ImVec2(maxX - minX, maxY - minY);
         ImVec2 stackCenter = ImVec2(minX + stackSize.x * 0.5f, minY + stackSize.y * 0.5f);
-        SpawnActionParticles(2, stackCenter, stackSize, scale, false); // Increased count slightly since perimeter is larger
+        if (ImGui::IsMouseDragPastThreshold(0, DRAG_THRESHOLD * scale)) {
+            m_particleSystem.EmitTrail(stackCenter, stackSize,
+                {ImGui::GetWindowPos(), ImGui::GetWindowSize(), scale}, dt);
+        }
 
         for (size_t c = 0; c < m_dragCards.size(); ++c) {
             ImVec2 swayOffset(pullOffset.x * 0.08f * c, pullOffset.y * 0.08f * c);
@@ -1233,22 +1235,7 @@ void Game::CheckWinCondition(float scale, bool cardsAnimating) {
                 
                 if (result.valid() && result.get_type() == sol::type::boolean && result.get<bool>()) {
                     m_isWon = true;
-                    m_winAnimTimer = 0.0f;
-                    
-                    ImVec2 mousePos = ImGui::GetMousePos();
-                    for (int i = 0; i < 500; ++i) {
-                        Particle p;
-                        p.pos = mousePos;
-                        float angle = (rand() % 360) * M_PI / 180.0f;
-                        float speed = 100.0f + (rand() % 600);
-                        p.velocity = ImVec2(cos(angle) * speed, sin(angle) * speed - 300.0f);
-                        p.life = 1.0f + (rand() % 200) / 100.0f;
-                        p.size = 3.0f + (rand() % 6); // Slightly larger for suits
-                        
-                        p.color = (rand() % 2 == 0) ? COLOR_RED : COLOR_BLACK;
-                        
-                        m_particles.push_back(p);
-                    }
+                    m_particleSystem.StartVictory({ImGui::GetWindowPos(), ImGui::GetWindowSize(), scale});
                 } else if (!result.valid()) {
                     sol::error err = result; throw err;
                 }
@@ -1280,6 +1267,7 @@ void Game::UpdateAndDraw() {
 
     bool hasGame = !m_currentScriptPath.empty();
     if (!hasGame) {
+        m_particleSystem.Clear();
         RenderStartScreen(drawList, scale);
         return;
     }
@@ -1549,105 +1537,15 @@ bool Game::IsWon() const {
     return m_isWon;
 }
 
-void Game::SpawnActionParticles(int count, ImVec2 center, ImVec2 size, float scale, bool isBurst) {
-    for (int i = 0; i < count; ++i) {
-        Particle p;
-        
-        // Generate a random point along the perimeter of the given size
-        float w = size.x;
-        float h = size.y;
-        float perimeter = 2.0f * (w + h);
-        float r = (rand() % 10000 / 10000.0f) * perimeter;
-        
-        if (r < w) { // Top edge
-            p.pos = ImVec2(center.x - w * 0.5f + r, center.y - h * 0.5f);
-        } else if (r < w + h) { // Right edge
-            p.pos = ImVec2(center.x + w * 0.5f, center.y - h * 0.5f + (r - w));
-        } else if (r < 2.0f * w + h) { // Bottom edge
-            p.pos = ImVec2(center.x + w * 0.5f - (r - w - h), center.y + h * 0.5f);
-        } else { // Left edge
-            p.pos = ImVec2(center.x - w * 0.5f, center.y + h * 0.5f - (r - 2.0f * w - h));
-        }
-        
-        float angle = (rand() % 360) * M_PI / 180.0f;
-        float speed = isBurst ? (50.0f + (rand() % 250) * scale) : (10.0f + (rand() % 50) * scale);
-        p.velocity = ImVec2(cos(angle) * speed, sin(angle) * speed - (isBurst ? 150.0f * scale : 0.0f));
-        p.life = isBurst ? (0.3f + (rand() % 40) / 100.0f) : (0.15f + (rand() % 20) / 100.0f);
-        p.size = 2.0f + (rand() % 3);
-        p.color = (rand() % 2 == 0) ? COLOR_RED : COLOR_BLACK;
-        m_particles.push_back(p);
-    }
+void Game::SpawnActionParticles(ImVec2 center, ImVec2 size, float scale) {
+    m_particleSystem.EmitMove(center, size, {ImGui::GetWindowPos(), ImGui::GetWindowSize(), scale});
 }
 
 void Game::UpdateAndDrawParticles(ImDrawList* drawList, float scale) {
-    float dt = ImGui::GetIO().DeltaTime;
-
-    if (m_isWon) {
-        ImVec2 winSize = ImGui::GetWindowSize();
-        ImVec2 winPos = ImGui::GetWindowPos();
-        m_winAnimTimer -= dt;
-        
-        // Spawn a new burst of particles periodically
-        if (m_winAnimTimer <= 0.0f) {
-            m_winAnimTimer = 0.1f + (rand() % 30) / 100.0f;
-            
-            int wx = std::max(1, (int)winSize.x);
-            int wy = std::max(1, (int)(winSize.y * 0.5f));
-            ImVec2 burstPos = ImVec2(winPos.x + (rand() % wx), winPos.y + winSize.y - (rand() % wy));
-                
-            for (int i = 0; i < 60; ++i) {
-                Particle p;
-                p.pos = burstPos;
-                float angle = (rand() % 360) * M_PI / 180.0f;
-                float speed = 50.0f + (rand() % 400) * scale;
-                p.velocity = ImVec2(cos(angle) * speed, sin(angle) * speed - 200.0f * scale);
-                p.life = 0.5f + (rand() % 150) / 100.0f;
-                p.size = 3.0f + (rand() % 6);
-                p.color = (rand() % 2 == 0) ? COLOR_RED : COLOR_BLACK;
-                m_particles.push_back(p);
-            }
-        }
-    }
-    
-    float gravity = 900.0f * scale;
-    ImVec2 winPos = ImGui::GetWindowPos();
-    ImVec2 winSize = ImGui::GetWindowSize();
-
-    // Update and draw particles
-    for (auto it = m_particles.begin(); it != m_particles.end(); ) {
-        // Confetti Physics: Add horizontal drag and a fluttering sway
-        it->velocity.x *= (1.0f - 2.0f * dt);
-        it->velocity.x += sin(it->life * 10.0f) * 80.0f * dt;
-        
-        it->velocity.y += gravity * 0.5f * dt;
-        it->pos.x += it->velocity.x * dt;
-        it->pos.y += it->velocity.y * dt;
-        it->life -= dt;
-        
-        if (m_isWon && it->pos.y > winPos.y + winSize.y) {
-            it->pos.y = winPos.y + winSize.y;
-            it->velocity.y *= -0.6f;
-        }
-        
-        if (it->life <= 0.0f || it->pos.x < winPos.x || it->pos.x > winPos.x + winSize.x || (!m_isWon && it->pos.y > winPos.y + winSize.y)) {
-            it = m_particles.erase(it);
-            continue;
-        }
-        
-        ImU32 col = it->color;
-        int alpha = (int)(255.0f * std::min(1.0f, it->life * 1.5f)); // Fade out slightly faster at the very end
-        col = (col & 0x00FFFFFF) | (alpha << 24);
-        
-        if (it->color == COLOR_RED) {
-            Suit s = ((int)it->size % 2 == 0) ? Suit::Hearts : Suit::Diamonds;
-            DrawSuit(drawList, it->pos, it->size * scale * 1.5f, s, col);
-        } else {
-            Suit s = ((int)it->size % 2 == 0) ? Suit::Spades : Suit::Clubs;
-            DrawSuit(drawList, it->pos, it->size * scale * 1.5f, s, col);
-        }
-        
-        ++it;
-    }
+    if (m_dragSourcePile == -1) m_particleSystem.StopTrail();
+    ParticleSystem::View view{ImGui::GetWindowPos(), ImGui::GetWindowSize(), scale};
+    m_particleSystem.Update(ImGui::GetIO().DeltaTime, view);
+    m_particleSystem.Draw(drawList, view);
 }
 
 void Game::SaveStateForUndo() {
@@ -1666,7 +1564,7 @@ void Game::Undo() {
     m_dragCardIndex = -1;
     m_dragCards.clear();
     m_isWon = false;
-    m_particles.clear();
+    m_particleSystem.Clear();
 }
 
 void Game::Redo() {
@@ -1680,5 +1578,5 @@ void Game::Redo() {
     m_dragCardIndex = -1;
     m_dragCards.clear();
     m_isWon = false;
-    m_particles.clear();
+    m_particleSystem.Clear();
 }

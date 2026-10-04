@@ -88,7 +88,7 @@ set(IMGUI_SOURCES
 )
 
 # Share the engine with the application and headless regression tests.
-add_library(cardbox_engine STATIC src/Game.cpp ${IMGUI_SOURCES})
+add_library(cardbox_engine STATIC src/Game.cpp src/ParticleSystem.cpp ${IMGUI_SOURCES})
 # Keep Lua argument and numeric checks enabled in Release builds too.
 target_compile_definitions(cardbox_engine PUBLIC SOL_ALL_SAFETIES_ON=1)
 add_executable(cardbox src/main.cpp)
@@ -119,6 +119,9 @@ if(BUILD_TESTING)
     target_link_libraries(cardbox_tests PRIVATE cardbox_engine)
     add_test(NAME cardbox_engine COMMAND cardbox_tests)
     set_tests_properties(cardbox_engine PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    add_executable(particle_tests tests/ParticleTests.cpp)
+    target_link_libraries(particle_tests PRIVATE cardbox_engine)
+    add_test(NAME cardbox_particles COMMAND particle_tests)
 endif()
 
 # Copy Lua scripts to a rules/ folder next to the executable
