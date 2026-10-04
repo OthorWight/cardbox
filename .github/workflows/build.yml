@@ -29,6 +29,9 @@ jobs:
     - name: Build
       run: cmake --build build --config Release -j4
 
+    - name: Test
+      run: ctest --test-dir build -C Release --output-on-failure
+
     - name: Gather Artifacts
       shell: bash
       run: |

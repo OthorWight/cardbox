@@ -7,6 +7,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <filesystem>
+#include <stdexcept>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -62,7 +63,6 @@ static float s_deal_delay = 0.0f;
 static float s_boardScale = 1.0f;
 static ImVec2 s_boardBasePos(0.0f, 0.0f);
 
-static size_t s_lua_allocated_memory = 0;
 static const size_t MAX_LUA_MEMORY = 10 * 1024 * 1024; // 10 MB memory limit
 
 static void* LuaMemoryAllocator(void* ud, void* ptr, size_t osize, size_t nsize) {
@@ -102,9 +102,9 @@ static void* LuaMemoryAllocator(void* ud, void* ptr, size_t osize, size_t nsize)
     return new_ptr;
 }
 
-Game::Game() {
+Game::Game(bool loadTextures) {
     SetupLuaBindings();
-    LoadCardTextures();
+    if (loadTextures) LoadCardTextures();
     LoadAvailableGames();
 }
 
@@ -127,9 +127,9 @@ void Game::SetupLuaBindings() {
     // Initialize memory tracking based on what sol2 already allocated before we hijack the allocator
     int kb = lua_gc(m_lua.lua_state(), LUA_GCCOUNT, 0);
     int bytes = lua_gc(m_lua.lua_state(), LUA_GCCOUNTB, 0);
-    s_lua_allocated_memory = (kb * 1024) + bytes;
+    m_luaAllocatedMemory = (kb * 1024) + bytes;
     
-    lua_setallocf(m_lua.lua_state(), LuaMemoryAllocator, &s_lua_allocated_memory);
+    lua_setallocf(m_lua.lua_state(), LuaMemoryAllocator, &m_luaAllocatedMemory);
 
     m_lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::table, sol::lib::string);
 
@@ -156,8 +156,14 @@ void Game::SetupLuaBindings() {
                    "Foundation", PileType::Foundation, "FreeCellSlot", PileType::FreeCellSlot, "Invisible", PileType::Invisible);
 
     m_lua.new_usertype<Card>("Card",
-        "rank", sol::property([](const Card& c) { return (int)c.rank; }, [](Card& c, int r) { c.rank = (Rank)r; }),
-        "suit", sol::property([](const Card& c) { return (int)c.suit; }, [](Card& c, int s) { c.suit = (Suit)s; }),
+        "rank", sol::property([](const Card& c) { return (int)c.rank; }, [](Card& c, lua_Integer r) {
+            if (r < 1 || r > 13) throw std::out_of_range("Card rank must be between 1 and 13");
+            c.rank = (Rank)r;
+        }),
+        "suit", sol::property([](const Card& c) { return (int)c.suit; }, [](Card& c, lua_Integer s) {
+            if (s < 0 || s > 3) throw std::out_of_range("Card suit must be between 0 and 3");
+            c.suit = (Suit)s;
+        }),
         "faceUp", &Card::faceUp,
         "Color", &Card::Color,
         "IsRed", &Card::IsRed
@@ -169,10 +175,16 @@ void Game::SetupLuaBindings() {
         "empty", &std::vector<Card>::empty,
         "clear", &std::vector<Card>::clear,
         "push_back", [](std::vector<Card>& v, const Card& c) { v.push_back(c); },
-        "pop_back", [](std::vector<Card>& v) { v.pop_back(); },
-        "back", [](std::vector<Card>& v) -> Card& { return v.back(); },
-        "front", [](std::vector<Card>& v) -> Card& { return v.front(); },
-        "get", [](std::vector<Card>& v, int i) -> Card& { return v[i]; }
+        "pop_back", [](std::vector<Card>& v) {
+            if (v.empty()) throw std::out_of_range("Cannot pop an empty card vector");
+            v.pop_back();
+        },
+        "back", [](std::vector<Card>& v) -> Card& {
+            if (v.empty()) throw std::out_of_range("Cannot read an empty card vector");
+            return v.back();
+        },
+        "front", [](std::vector<Card>& v) -> Card& { return v.at(0); },
+        "get", [](std::vector<Card>& v, lua_Integer i) -> Card& { return v.at(i); }
     );
 
     m_lua.new_usertype<Pile>("Pile",
@@ -190,7 +202,7 @@ void Game::SetupLuaBindings() {
         "empty", &std::vector<Pile>::empty,
         "clear", &std::vector<Pile>::clear,
         "push_back", [](std::vector<Pile>& v, const Pile& p) { v.push_back(p); },
-        "get", [](std::vector<Pile>& v, int i) -> Pile& { return v[i]; }
+        "get", [](std::vector<Pile>& v, lua_Integer i) -> Pile& { return v.at(i); }
     );
 
     // Expose a text drawing function to Lua
@@ -219,7 +231,10 @@ void Game::SetupLuaBindings() {
     m_lua.set_function("GetTime", [this]() { return (double)m_gameTime; });
 }
 
-void Game::CreateDeck(std::vector<Card>& deck, int numDecks) {
+void Game::CreateDeck(std::vector<Card>& deck, lua_Integer numDecks) {
+    if (numDecks < 1 || numDecks > 8) {
+        throw std::out_of_range("NumDecks must be between 1 and 8");
+    }
     deck.clear();
     for (int d = 0; d < numDecks; ++d) {
         for (int s = 0; s < 4; ++s) {
@@ -341,7 +356,7 @@ void Game::InitGame(const std::string& scriptPath) {
         m_lua["Draw"] = sol::lua_nil;
 
         lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
-        m_lua.script_file(m_currentScriptPath);
+        m_lua.script_file(m_currentScriptPath, sol::load_mode::text);
         m_currentGameName = m_lua["GameName"].get_or<std::string>("Unknown Game");
         m_currentHelpText = m_lua["HelpText"].get_or<std::string>("No help available.");
         sol::optional<ImVec2> cardSizeOpt = m_lua["CardSize"];
@@ -349,7 +364,7 @@ void Game::InitGame(const std::string& scriptPath) {
         m_cornerRadius = m_lua["CornerRadius"].get_or(DEFAULT_CORNER_RADIUS);
 
         std::vector<Card> deck;
-        int numDecks = m_lua["NumDecks"].get_or(1);
+        lua_Integer numDecks = m_lua["NumDecks"].get_or<lua_Integer>(1);
         CreateDeck(deck, numDecks);
         ShuffleDeck(deck);
 
@@ -359,9 +374,11 @@ void Game::InitGame(const std::string& scriptPath) {
             if (!result.valid()) { sol::error err = result; throw err; }
         }
         lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
-    } catch (const sol::error& e) {
+    } catch (const std::exception& e) {
         lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
         std::cerr << "Lua Error during InitGame: " << e.what() << std::endl;
+        m_piles.clear();
+        m_currentScriptPath.clear();
     }
 }
 
@@ -416,6 +433,11 @@ bool Game::CanDrop(int sourcePileIdx, const std::vector<Card>& cards, int target
 }
 
 void Game::DoMove(int sourcePileIdx, int targetPileIdx, int cardIdx) {
+    if (sourcePileIdx < 0 || sourcePileIdx >= (int)m_piles.size() ||
+        targetPileIdx < 0 || targetPileIdx >= (int)m_piles.size() ||
+        sourcePileIdx == targetPileIdx || cardIdx < 0 ||
+        cardIdx >= (int)m_piles[sourcePileIdx].cards.size()) return;
+
     Pile& sp = m_piles[sourcePileIdx];
     Pile& tp = m_piles[targetPileIdx];
     
@@ -442,6 +464,7 @@ void Game::HandleClick(int pileIdx) {
     
     // Deep copy state just in case the click mutates it
     auto backup = m_piles;
+    int backupScore = m_score;
     
     sol::protected_function handleClick = m_lua["HandleClick"];
     if (handleClick.valid()) {
@@ -456,7 +479,7 @@ void Game::HandleClick(int pileIdx) {
         }
         
         // Automatically save to undo stack if the Lua script changed the board state
-        bool changed = false;
+        bool changed = m_score != backupScore;
         if (m_piles.size() != backup.size()) changed = true;
         else {
             for (size_t i = 0; i < m_piles.size(); ++i) {
@@ -468,7 +491,7 @@ void Game::HandleClick(int pileIdx) {
             }
         }
         if (changed) {
-            m_undoStack.push_back(backup);
+            m_undoStack.push_back({std::move(backup), backupScore});
             m_redoStack.clear();
         }
     }
@@ -521,7 +544,7 @@ void Game::RenderMenuBar() {
                 }
             }
             ImGui::Separator();
-            if (ImGui::MenuItem("Exit")) exit(0);
+            if (ImGui::MenuItem("Exit")) glfwSetWindowShouldClose(glfwGetCurrentContext(), GLFW_TRUE);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Help")) {
@@ -568,11 +591,11 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
                 m_lua["CornerRadius"] = sol::lua_nil;
 
                 lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
-                m_lua.script_file(path);
+                m_lua.script_file(path, sol::load_mode::text);
                 p.name = m_lua["GameName"].get_or<std::string>("Unknown");
                 p.autoCenter = m_lua["AutoCenter"].get_or(true);
                 std::vector<Card> deck;
-                CreateDeck(deck, m_lua["NumDecks"].get_or(1));
+                CreateDeck(deck, m_lua["NumDecks"].get_or<lua_Integer>(1));
                 ShuffleDeck(deck);
                 sol::protected_function initFunc = m_lua["Init"];
                 if (initFunc.valid()) {
@@ -584,7 +607,7 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
             p.cornerRadius = m_lua["CornerRadius"].get_or(DEFAULT_CORNER_RADIUS);
                 lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
                 s_previews.push_back(p);
-            } catch (const sol::error& e) {
+            } catch (const std::exception& e) {
                 lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
                 std::cerr << "Lua Error loading preview for " << path << ": " << e.what() << std::endl;
             } catch (...) {
@@ -991,9 +1014,20 @@ void Game::ProcessAutoSolve() {
                 if (result.valid() && result.get_type() == sol::type::table) {
                     sol::table move = result;
                     if (!move.empty()) {
-                        int src = move[1];
-                        int dst = move[2];
-                        int idx = move[3];
+                        // Lua rules may return incomplete or invalid moves.
+                        sol::object srcValue = move[1];
+                        sol::object dstValue = move[2];
+                        sol::object idxValue = move[3];
+                        if (!srcValue.is<lua_Integer>() || !dstValue.is<lua_Integer>() || !idxValue.is<lua_Integer>()) return;
+                        lua_Integer src = srcValue.as<lua_Integer>();
+                        lua_Integer dst = dstValue.as<lua_Integer>();
+                        lua_Integer idx = idxValue.as<lua_Integer>();
+                        if (src < 0 || src >= (lua_Integer)m_piles.size() ||
+                            dst < 0 || dst >= (lua_Integer)m_piles.size() || src == dst ||
+                            idx < 0 || idx >= (lua_Integer)m_piles[src].cards.size()) return;
+                        if (!CanPickup(src, idx)) return;
+                        std::vector<Card> cards(m_piles[src].cards.begin() + idx, m_piles[src].cards.end());
+                        if (!CanDrop(src, cards, dst)) return;
                         // Do not SaveStateForUndo() here to avoid flooding the undo stack with single auto-moves
                         DoMove(src, dst, idx);
                         m_redoStack.clear();
@@ -1617,30 +1651,34 @@ void Game::UpdateAndDrawParticles(ImDrawList* drawList, float scale) {
 }
 
 void Game::SaveStateForUndo() {
-    m_undoStack.push_back(m_piles);
+    m_undoStack.push_back({m_piles, m_score});
     m_redoStack.clear();
 }
 
 void Game::Undo() {
     if (m_undoStack.empty()) return;
-    m_redoStack.push_back(m_piles);
-    m_piles = m_undoStack.back();
+    m_redoStack.push_back({m_piles, m_score});
+    m_piles = std::move(m_undoStack.back().piles);
+    m_score = m_undoStack.back().score;
     m_undoStack.pop_back();
     
     m_dragSourcePile = -1;
     m_dragCardIndex = -1;
     m_dragCards.clear();
     m_isWon = false;
+    m_particles.clear();
 }
 
 void Game::Redo() {
     if (m_redoStack.empty()) return;
-    m_undoStack.push_back(m_piles);
-    m_piles = m_redoStack.back();
+    m_undoStack.push_back({m_piles, m_score});
+    m_piles = std::move(m_redoStack.back().piles);
+    m_score = m_redoStack.back().score;
     m_redoStack.pop_back();
     
     m_dragSourcePile = -1;
     m_dragCardIndex = -1;
     m_dragCards.clear();
     m_isWon = false;
+    m_particles.clear();
 }

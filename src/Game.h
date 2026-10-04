@@ -18,8 +18,8 @@ enum class Rank { Ace = 1, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten,
 enum class PileType { Stock, Waste, Tableau, Foundation, FreeCellSlot, Invisible };
 
 struct Card {
-    Rank rank;
-    Suit suit;
+    Rank rank = Rank::Ace;
+    Suit suit = Suit::Hearts;
     bool faceUp = false;
 
     // Animation state
@@ -75,13 +75,17 @@ public:
     static constexpr float DEFAULT_CARD_HEIGHT = 140.0f;
     static constexpr float DEFAULT_CORNER_RADIUS = 8.0f;
 
-    Game();
+    // Disable texture loading for headless engine use.
+    explicit Game(bool loadTextures = true);
     ~Game();
     void InitGame(const std::string& scriptPath);
     void UpdateAndDraw();
     bool IsWon() const;
 
 private:
+    friend struct GameTestAccess;
+    // Must outlive the Lua state whose allocator references it.
+    size_t m_luaAllocatedMemory = 0;
     sol::state m_lua;
     std::vector<Pile> m_piles;
     std::vector<std::string> m_availableGames;
@@ -111,8 +115,12 @@ private:
     ImVec2 m_dragOffset;
 
     // Undo stack
-    std::vector<std::vector<Pile>> m_undoStack;
-    std::vector<std::vector<Pile>> m_redoStack;
+    struct SavedState {
+        std::vector<Pile> piles;
+        int score;
+    };
+    std::vector<SavedState> m_undoStack;
+    std::vector<SavedState> m_redoStack;
     void SaveStateForUndo();
     void Undo();
     void Redo();
@@ -120,7 +128,7 @@ private:
     // Core game methods
     void SetupLuaBindings();
     void LoadAvailableGames();
-    void CreateDeck(std::vector<Card>& deck, int numDecks = 1);
+    void CreateDeck(std::vector<Card>& deck, lua_Integer numDecks = 1);
     void ShuffleDeck(std::vector<Card>& deck);
     
     bool CanPickup(int pileIdx, int cardIdx);

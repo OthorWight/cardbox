@@ -36,6 +36,17 @@ make
 
 Once built, you can run the executable generated in the `build/` directory.
 
+Run the headless engine regression tests with:
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+Tests are enabled by default; use `-DBUILD_TESTING=OFF` when configuring to
+build only the application. Lua rules may request 1–8 decks with `NumDecks`.
+Invalid vector accesses and card ranks/suits raise Lua errors. Rule files
+must contain Lua source text.
+
 ## License
 
 MIT

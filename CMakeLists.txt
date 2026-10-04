@@ -87,22 +87,22 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
-# Application sources
-set(APP_SOURCES
-    src/main.cpp
-    src/Game.cpp
-)
+# Share the engine with the application and headless regression tests.
+add_library(cardbox_engine STATIC src/Game.cpp ${IMGUI_SOURCES})
+# Keep Lua argument and numeric checks enabled in Release builds too.
+target_compile_definitions(cardbox_engine PUBLIC SOL_ALL_SAFETIES_ON=1)
+add_executable(cardbox src/main.cpp)
+target_link_libraries(cardbox PRIVATE cardbox_engine)
 
-add_executable(cardbox ${APP_SOURCES} ${IMGUI_SOURCES})
-
-target_include_directories(cardbox PRIVATE
+target_include_directories(cardbox_engine PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
     ${glfw_SOURCE_DIR}/include
     ${stb_SOURCE_DIR}
 )
 
-target_link_libraries(cardbox PRIVATE
+target_link_libraries(cardbox_engine PUBLIC
     glfw
     OpenGL::GL
     sol2::sol2
@@ -110,11 +110,19 @@ target_link_libraries(cardbox PRIVATE
 )
 
 if (UNIX AND NOT APPLE)
-    target_link_libraries(cardbox PRIVATE dl pthread)
+    target_link_libraries(cardbox_engine PUBLIC dl pthread)
+endif()
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(cardbox_tests tests/GameTests.cpp)
+    target_link_libraries(cardbox_tests PRIVATE cardbox_engine)
+    add_test(NAME cardbox_engine COMMAND cardbox_tests)
+    set_tests_properties(cardbox_engine PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
 # Copy Lua scripts to a rules/ folder next to the executable
-file(GLOB LUA_SCRIPTS "src/*.lua")
+file(GLOB LUA_SCRIPTS CONFIGURE_DEPENDS "src/*.lua")
 add_custom_command(TARGET cardbox POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:cardbox>/rules
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LUA_SCRIPTS} $<TARGET_FILE_DIR:cardbox>/rules/
