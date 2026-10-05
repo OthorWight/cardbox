@@ -1,173 +1,125 @@
 GameName = "Pyramid"
+
+-- Sandstone window theme. Colors use RGB or RGBA byte channels.
+Theme = {
+    Background = {29, 24, 20}, BackgroundBottom = {20, 17, 15},
+    Toolbar = {39, 32, 25}, ButtonRounding = 6,
+    EmptyPile = {39, 32, 25, 180}, EmptyPileBorder = {98, 82, 60},
+    EmptyPileText = {183, 166, 140}, CardBack = {65, 52, 37},
+    CardBorder = {98, 82, 60}, CardHover = {233, 194, 112},
+    Colors = {
+        Text = {244, 235, 214}, TextDisabled = {183, 166, 140},
+        WindowBg = {39, 32, 25}, ChildBg = {39, 32, 25},
+        PopupBg = {52, 43, 33}, MenuBarBg = {39, 32, 25},
+        Border = {98, 82, 60}, BorderShadow = {0, 0, 0, 0},
+        FrameBg = {73, 60, 40}, FrameBgHovered = {94, 77, 50},
+        FrameBgActive = {116, 95, 62}, Button = {73, 60, 40},
+        ButtonHovered = {94, 77, 50}, ButtonActive = {116, 95, 62},
+        Header = {73, 60, 40}, HeaderHovered = {94, 77, 50},
+        HeaderActive = {116, 95, 62}, TitleBg = {39, 32, 25},
+        TitleBgActive = {52, 43, 33}, TitleBgCollapsed = {39, 32, 25},
+        Separator = {98, 82, 60}, SeparatorHovered = {233, 194, 112},
+        SeparatorActive = {233, 194, 112}, ScrollbarBg = {29, 24, 20},
+        ScrollbarGrab = {98, 82, 60}, ScrollbarGrabHovered = {94, 77, 50},
+        ScrollbarGrabActive = {116, 95, 62}, CheckMark = {233, 194, 112},
+        SliderGrab = {233, 194, 112}, SliderGrabActive = {233, 194, 112},
+        TextSelectedBg = {233, 194, 112, 65}, NavCursor = {233, 194, 112},
+        ModalWindowDimBg = {20, 17, 15, 190}
+    }
+}
+
 NumDecks = 1
-AutoCenter = true
-HelpText = "Clear the pyramid by matching pairs of cards that sum to 13.\nKings are worth 13 and can be removed individually.\nQueens=12, Jacks=11, Aces=1.\nDrag a card onto another to pair them.\nRight-click a King to remove it.\nClick the Stock to deal cards."
+AutoCenter = false
+CardSize = ImVec2.new(80, 112)
+HelpText = 'Clear the 28-card pyramid. Pair exposed cards totaling 13: Ace=1, Jack=11, Queen=12, King=13. Click two cards or drag one onto its partner. Click or right-click an exposed King to remove it. You may use the waste top. Two stock redeals are allowed. Ctrl+Z/Ctrl+Y undo/redo restores draws, redeals, and pairs.'
+local game = Solitaire.new({kind="pyramid", first=2, last=29, stock=0, waste=1, goal=28,
+    progress="Pyramid cleared", mainLabel="Draw / recycle", description="Pair exposed cards totaling 13. Click Kings to remove them.",
+    tip="Click one exposed card, then its partner. Dragging also works. Two stock redeals are allowed."})
 
-function Init(piles, deck)
-    local startX, startY = 1280 / 2 - 50, 40.0
-    local padX = 110.0
-    local padY = 60.0
-
-    -- 0: Stock
-    local stock = Pile.new()
-    stock.id = 0; stock.type = PileType.Stock
-    stock.pos = ImVec2.new(100, startY)
-    stock.size = ImVec2.new(100.0, 140.0)
-    stock.offset = ImVec2.new(0.2, -0.5)
-    piles:push_back(stock)
-
-    -- 1: Waste
-    local waste = Pile.new()
-    waste.id = 1; waste.type = PileType.Waste
-    waste.pos = ImVec2.new(100 + 120, startY)
-    waste.size = ImVec2.new(100.0, 140.0)
-    waste.offset = ImVec2.new(20.0, 0.0)
-    piles:push_back(waste)
-
-    -- 2 to 29: Pyramid (28 cards)
-    local idx = 2
-    for row = 0, 6 do
-        local rowStartX = startX - (row * padX * 0.5)
-        local rowY = startY + (row * padY)
-        for col = 0, row do
-            local p = Pile.new()
-            p.id = idx; p.type = PileType.Invisible
-            p.pos = ImVec2.new(rowStartX + col * padX, rowY)
-            p.size = ImVec2.new(100.0, 140.0)
-            p.offset = ImVec2.new(0.0, 0.0)
-
-            local c = deck:back()
-            deck:pop_back()
-            c.faceUp = true
-            p.cards:push_back(c)
-
-            piles:push_back(p)
-            idx = idx + 1
+function Init(piles,deck)
+    game:Reset(piles)
+    game:Add(0,PileType.Stock,64,160,ImVec2.new(0.15,-0.3))
+    game:Add(1,PileType.Waste,180,160,ImVec2.new(16,0))
+    local index=2
+    for row=0,6 do
+        for column=0,row do
+            game:Add(index,PileType.Invisible,510-row*46+column*92,160+row*48)
+            local card=deck:take_back(); card.faceUp=true; piles:get(index).cards:push_back(card)
+            index=index+1
         end
     end
-
-    -- 30: Foundation (discard pile)
-    local found = Pile.new()
-    found.id = 30; found.type = PileType.Foundation
-    found.pos = ImVec2.new(1100 - 120, startY)
-    found.size = ImVec2.new(100.0, 140.0)
-    found.offset = ImVec2.new(0.0, 0.0)
-    piles:push_back(found)
-
-    -- Put remaining deck in stock
-    piles:get(0).cards = deck
+    game:Add(30,PileType.Foundation,900,160)
+    piles:get(0).cards=deck
+    local card=piles:get(0).cards:take_back(); card.faceUp=true; piles:get(1).cards:push_back(card)
 end
-
--- Helper to check if a card in the pyramid is covered by the row below it
-function IsBlocked(piles, pileIdx)
-    if pileIdx < 2 or pileIdx > 29 then return false end
-    local i = pileIdx - 2
-    local row, sum = 0, 0
-    while sum + row < i do
-        row = row + 1
-        sum = sum + row
+function IsBlocked(piles,index)
+    if index<2 or index>29 then return false end
+    local offset,row,start=index-2,0,0
+    while start+row<offset do start=start+row+1; row=row+1 end
+    if row==6 then return false end
+    return not piles:get(index+row+1).cards:empty() or not piles:get(index+row+2).cards:empty()
+end
+function CanPickup(piles,source,index)
+    if source<1 or source>29 or IsBlocked(piles,source) then return false end
+    local cards=piles:get(source).cards
+    return index>=0 and index==cards:size()-1 and cards:get(index).faceUp
+end
+function CanDrop(piles,source,target,cards)
+    if source==target or cards:size()~=1 or source<1 or source>29 or IsBlocked(piles,source) then return false end
+    if target==30 then return cards:front().rank==13 end
+    if target<1 or target>29 or IsBlocked(piles,target) then return false end
+    local destination=piles:get(target).cards
+    return not destination:empty() and destination:back().rank+cards:front().rank==13
+end
+function AfterMove(piles,source,target)
+    if target~=30 then
+        local cards=piles:get(target).cards
+        local a,b=cards:take_back(),cards:take_back()
+        piles:get(30).cards:push_back(b); piles:get(30).cards:push_back(a)
     end
-    if row == 6 then return false end -- Bottom row is always exposed
-    
-    local leftChild = i + row + 1
-    local rightChild = i + row + 2
-    if not piles:get(leftChild + 2).cards:empty() then return true end
-    if not piles:get(rightChild + 2).cards:empty() then return true end
-    return false
+    game:Record()
 end
-
-function CanPickup(piles, pileIdx, cardIdx)
-    local p = piles:get(pileIdx)
-    if not p.cards:get(cardIdx).faceUp then return false end
-    if cardIdx ~= p.cards:size() - 1 then return false end
-    if IsBlocked(piles, pileIdx) then return false end
-    return true
-end
-
-function CanDrop(piles, sourcePileIdx, targetPileIdx, dragCards)
-    if dragCards:size() ~= 1 then return false end
-    local dragCard = dragCards:get(0)
-
-    -- Kings can be dragged to the Foundation
-    if targetPileIdx == 30 and dragCard.rank == 13 then
-        return true
+function HandleClick(piles,source)
+    if source==0 then
+        local stock,waste=piles:get(0).cards,piles:get(1).cards
+        if not stock:empty() then
+            local card=stock:take_back(); card.faceUp=true; waste:push_back(card); game.draws=game.draws+1
+        elseif not waste:empty() and game.passes<2 then
+            while not waste:empty() do local card=waste:take_back(); card.faceUp=false; stock:push_back(card) end
+            game.passes=game.passes+1
+        else game.notice="No stock redeals remain. Find an exposed pair or undo."; return end
+        game:Record(); return
     end
-
-    -- Pair matching
-    local tp = piles:get(targetPileIdx)
-    if targetPileIdx >= 1 and targetPileIdx <= 29 and not tp.cards:empty() then
-        if IsBlocked(piles, targetPileIdx) then return false end
-        if dragCard.rank + tp.cards:back().rank == 13 then
-            return true
+    local cards=piles:get(source).cards
+    if not CanPickup(piles,source,cards:size()-1) then game.notice="That card is still covered."; return end
+    if cards:back().rank==13 then
+        piles:get(30).cards:push_back(cards:take_back()); game:Record(); return
+    end
+    if game.selected==source then game.selected=-1; game.notice="Selection cleared."; return end
+    if game.selected>=1 then
+        local selected=piles:get(game.selected).cards
+        if not selected:empty() and not IsBlocked(piles,game.selected) and
+            selected:back().rank+cards:back().rank==13 then
+            piles:get(30).cards:push_back(selected:take_back())
+            piles:get(30).cards:push_back(cards:take_back()); game:Record(); return
         end
     end
-
-    return false
+    game.selected=source
+    game.notice="Selected "..game:CardName(cards:back())..". Choose an exposed "..(13-cards:back().rank).."."
 end
 
-function AfterMove(piles, sourcePileIdx, targetPileIdx, cardIdx)
-    if targetPileIdx == 30 then return end -- Was just a King dropping on foundation
-
-    -- It was a pair match! The target pile now has BOTH cards. Pop them and send to Foundation.
-    local tp = piles:get(targetPileIdx)
-    local fp = piles:get(30)
-
-    local c1 = tp.cards:back()
-    tp.cards:pop_back()
-    local c2 = tp.cards:back()
-    tp.cards:pop_back()
-
-    fp.cards:push_back(c2)
-    fp.cards:push_back(c1)
-end
-
-function HandleClick(piles, pileIdx)
-    local p = piles:get(pileIdx)
-    local waste = piles:get(1)
-    
-    if pileIdx == 0 then -- Stock clicked
-        if not p.cards:empty() then
-            local c = p.cards:back()
-            p.cards:pop_back()
-            c.faceUp = true
-            waste.cards:push_back(c)
-        else
-            while not waste.cards:empty() do
-                local c = waste.cards:back()
-                waste.cards:pop_back()
-                c.faceUp = false
-                p.cards:push_back(c)
-            end
-        end
+function IsWon() return game:Progress()==game.config.goal end
+function AutoSolve(piles) game.piles=piles; game:Layout(); return {} end
+function SaveState() return game:SaveState() end
+function LoadState(piles,data) game:LoadState(piles,data) end
+function DrawBackground() game:Background() end
+function Draw() game:Draw() end
+function HandleAction(piles,action)
+    game.piles=piles
+    if action=="hint" then game:Hint()
+    elseif action=="safe" and game.config.foundationFirst and game.config.kind~="spider" then game:SafeFoundations()
+    elseif action=="main" then
+        if game.config.stock then HandleClick(piles,game.config.stock)
+        elseif game.config.foundationFirst then game:SafeFoundations() end
     end
-end
-
-function AutoSolve(piles)
-    -- Auto-remove Kings from the Waste pile
-    -- local waste = piles:get(1)
-    -- if not waste.cards:empty() then
-    --     local c = waste.cards:back()
-    --     if c.rank == 13 then
-    --         return {1, 30, waste.cards:size() - 1}
-    --     end
-    -- end
-
-    -- Auto-remove Kings from exposed Pyramid cards
-    for i = 2, 29 do
-        local p = piles:get(i)
-        if not p.cards:empty() and not IsBlocked(piles, i) then
-            if p.cards:back().rank == 13 then
-                return {i, 30, p.cards:size() - 1}
-            end
-        end
-    end
-
-    return {}
-end
-
-function IsWon(piles)
-    for i = 2, 29 do
-        if not piles:get(i).cards:empty() then return false end
-    end
-    return true
 end

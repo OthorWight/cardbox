@@ -126,13 +126,20 @@ if(BUILD_TESTING)
     target_link_libraries(dungeon_tests PRIVATE cardbox_engine)
     add_test(NAME cardbox_dungeon COMMAND dungeon_tests)
     set_tests_properties(cardbox_dungeon PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    add_executable(rules_tests tests/RulesTests.cpp)
+    target_link_libraries(rules_tests PRIVATE cardbox_engine)
+    add_test(NAME cardbox_rules COMMAND rules_tests)
+    set_tests_properties(cardbox_rules PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
 # Copy Lua scripts to a rules/ folder next to the executable
 file(GLOB LUA_SCRIPTS CONFIGURE_DEPENDS "src/*.lua")
+file(GLOB LUA_SUPPORT CONFIGURE_DEPENDS "src/lib/*.lua")
 add_custom_command(TARGET cardbox POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:cardbox>/rules
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LUA_SCRIPTS} $<TARGET_FILE_DIR:cardbox>/rules/
+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:cardbox>/rules/lib
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LUA_SUPPORT} $<TARGET_FILE_DIR:cardbox>/rules/lib/
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/cards $<TARGET_FILE_DIR:cardbox>/cards
 )
 
@@ -141,6 +148,8 @@ add_custom_command(TARGET cardbox POST_BUILD
 add_custom_target(cardbox_rules ALL
     COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:cardbox>/rules
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LUA_SCRIPTS} $<TARGET_FILE_DIR:cardbox>/rules/
-    DEPENDS ${LUA_SCRIPTS}
+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:cardbox>/rules/lib
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LUA_SUPPORT} $<TARGET_FILE_DIR:cardbox>/rules/lib/
+    DEPENDS ${LUA_SCRIPTS} ${LUA_SUPPORT}
 )
 add_dependencies(cardbox_rules cardbox)

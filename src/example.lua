@@ -1,188 +1,103 @@
 -- Global variables expected by the C++ engine
 GameName = "Example"
+
+-- Cobalt window theme. Colors use RGB or RGBA byte channels.
+Theme = {
+    Background = {17, 22, 34}, BackgroundBottom = {11, 15, 25},
+    Toolbar = {24, 32, 47}, ButtonRounding = 6,
+    EmptyPile = {24, 32, 47, 180}, EmptyPileBorder = {64, 85, 115},
+    EmptyPileText = {149, 172, 199}, CardBack = {35, 59, 87},
+    CardBorder = {64, 85, 115}, CardHover = {126, 185, 245},
+    Colors = {
+        Text = {230, 237, 246}, TextDisabled = {149, 172, 199},
+        WindowBg = {24, 32, 47}, ChildBg = {24, 32, 47},
+        PopupBg = {33, 44, 63}, MenuBarBg = {24, 32, 47},
+        Border = {64, 85, 115}, BorderShadow = {0, 0, 0, 0},
+        FrameBg = {35, 59, 89}, FrameBgHovered = {51, 80, 113},
+        FrameBgActive = {69, 102, 137}, Button = {35, 59, 89},
+        ButtonHovered = {51, 80, 113}, ButtonActive = {69, 102, 137},
+        Header = {35, 59, 89}, HeaderHovered = {51, 80, 113},
+        HeaderActive = {69, 102, 137}, TitleBg = {24, 32, 47},
+        TitleBgActive = {33, 44, 63}, TitleBgCollapsed = {24, 32, 47},
+        Separator = {64, 85, 115}, SeparatorHovered = {126, 185, 245},
+        SeparatorActive = {126, 185, 245}, ScrollbarBg = {17, 22, 34},
+        ScrollbarGrab = {64, 85, 115}, ScrollbarGrabHovered = {51, 80, 113},
+        ScrollbarGrabActive = {69, 102, 137}, CheckMark = {126, 185, 245},
+        SliderGrab = {126, 185, 245}, SliderGrabActive = {126, 185, 245},
+        TextSelectedBg = {126, 185, 245, 65}, NavCursor = {126, 185, 245},
+        ModalWindowDimBg = {11, 15, 25, 190}
+    }
+}
+
 NumDecks = 1
 AutoCenter = false
-CardSize = ImVec2.new(120.0, 120.0) -- Let's make them square!
-CornerRadius = 20.0                 -- Extra round corners
-HelpText = "This is a dummy game demonstrating all available Lua API bindings.\nMove all cards out of the first pile to trigger the win fireworks!"
-
-ButtonClickCount = 0
-
--- Init is called once when the game starts or restarts.
--- @param piles: A VectorPile object (std::vector<Pile> in C++)
--- @param deck: A VectorCard object (std::vector<Card> in C++) containing the shuffled deck
-function Init(piles, deck)
-    -- ==========================================
-    -- ImVec2 API
-    -- ==========================================
-    local pos1 = ImVec2.new()           -- Default constructor (0,0)
-    local pos2 = ImVec2.new(20.0, 60.0) -- Constructor with x, y
-    local pos3 = ImVec2.new(180.0, 60.0)
-    local pos4 = ImVec2.new(380.0, 60.0)
-    pos1.x = 20.0                       -- Modify x property
-    pos1.y = 240.0                      -- Modify y property
-
-    -- ==========================================
-    -- VectorPile API
-    -- ==========================================
-    piles:clear()                       -- Clear all piles (already empty at start, but good for demo)
-    local isPilesEmpty = piles:empty()  -- Returns true if empty
-    local numPiles = piles:size()       -- Returns 0
-
-    -- ==========================================
-    -- Pile API & VectorCard API
-    -- ==========================================
-    -- 0: Tableau
-    local p = Pile.new()
-    p.id = 0
-    p.pos = pos1
-    p.size = CardSize
-    p.offset = ImVec2.new(0.0, 25.0)
-    
-    -- PileType Enum: Stock, Waste, Tableau, Foundation, FreeCellSlot, Invisible
-    p.type = PileType.Tableau 
-
-    -- Deal 5 cards to Tableau to play around with
-    for i = 1, 5 do
-        if not deck:empty() then
-            local c = deck:back()
-            c.faceUp = true
-            p.cards:push_back(c)
-            deck:pop_back()
+CardSize = ImVec2.new(94,132)
+CornerRadius = 12
+HelpText = [[A small tutorial for the Lua game API. Collect all 52 cards in the archive. Click Draw to expose a stock card, then click or drag an exposed card into the archive. Tableau groups may move to another work column in any order; only single cards enter the archive. Empty stock recycles the remaining waste. Undo restores cards, progress, and move count. Unlike a solitaire puzzle, every deal can be completed.]]
+local game=Solitaire.new({kind="tutorial",first=0,last=2,safeLabel="Archive exposed",foundationFirst=5,foundationLast=5,stock=3,waste=4,goal=52,
+    progress="Cards archived",mainLabel="Draw / recycle",description="Learn the controls. Collect all 52 cards in the archive; every deal is solvable.",
+    tip="Click the exposed card in a work column or waste to archive it. Dragging works too."})
+function Init(piles,deck)
+    game:Reset(piles)
+    for i=0,2 do
+        game:Add(i,PileType.Tableau,120+i*260,335)
+        for j=1,4 do local card=deck:take_back(); card.faceUp=true; piles:get(i).cards:push_back(card) end
+    end
+    game:Add(3,PileType.Stock,120,165,ImVec2.new(0.15,-0.3))
+    game:Add(4,PileType.Waste,290,165,ImVec2.new(16,0))
+    game:Add(5,PileType.Foundation,800,165); piles:get(3).cards=deck; game:Layout()
+end
+function CanPickup(piles,source,index)
+    if source<0 or source>4 or source==3 then return false end
+    local cards=piles:get(source).cards
+    return index>=0 and index<cards:size() and cards:get(index).faceUp and (source~=4 or index==cards:size()-1)
+end
+function CanDrop(piles,source,target,cards)
+    if source==target or source<0 or source>4 or source==3 or cards:empty() then return false end
+    return (target>=0 and target<=2) or (target==5 and cards:size()==1)
+end
+function AfterMove() game:Record() end
+function HandleClick(piles,source,index)
+    if source==3 then
+        local stock,waste=piles:get(3).cards,piles:get(4).cards
+        if not stock:empty() then
+            local card=stock:take_back(); card.faceUp=true; waste:push_back(card); game.draws=game.draws+1
+        elseif not waste:empty() then
+            while not waste:empty() do local card=waste:take_back(); card.faceUp=false; stock:push_back(card) end
+            game.passes=game.passes+1
+        else game.notice="Archive the remaining work cards to finish."; return end
+        game:Record()
+    elseif source>=0 and source<=4 and source~=3 then
+        local cards=piles:get(source).cards
+        if not cards:empty() and (not index or index<0 or index==cards:size()-1) then
+            piles:get(5).cards:push_back(cards:take_back()); game:Record()
         end
     end
-
-    -- Extra API Demo (doesn't impact game state)
-    if not p.cards:empty() then
-        local demoCard = p.cards:back()
-        local isRed = demoCard:IsRed()
-        local color = demoCard:Color()
-    end
-
-    -- Put the pile into the game board
-    piles:push_back(p)
-    
-    -- 1: Stock (contains remaining deck)
-    local stock = Pile.new()
-    stock.id = 1
-    stock.type = PileType.Stock
-    stock.pos = pos2
-    stock.size = CardSize
-    stock.offset = ImVec2.new(0.2, -0.5)
-    stock.cards = deck                  -- Reassign entire VectorCard at once
-    piles:push_back(stock)
-
-    -- 2: Waste (target for stock clicks)
-    local waste = Pile.new()
-    waste.id = 2
-    waste.type = PileType.Waste
-    waste.pos = pos3
-    waste.size = CardSize
-    waste.offset = ImVec2.new(20.0, 0.0)
-    piles:push_back(waste)
-
-    -- 3: Foundation (target for Tableau cards)
-    local foundation = Pile.new()
-    foundation.id = 3
-    foundation.type = PileType.Foundation
-    foundation.pos = pos4
-    foundation.size = CardSize
-    foundation.offset = ImVec2.new(0.0, 0.0)
-    piles:push_back(foundation)
 end
-
--- Called by C++ to determine if a specific card can be dragged.
-function CanPickup(piles, pileIdx, cardIdx)
-    local p = piles:get(pileIdx)
-    local c = p.cards:get(cardIdx)
-    
-    -- Cannot pick up from Stock
-    if p.type == PileType.Stock then return false end
-
-    -- Only allow picking up face-up cards
-    return c.faceUp
-end
-
--- Called by C++ to determine if a dragged stack of cards can be dropped on a target pile.
-function CanDrop(piles, sourcePileIdx, targetPileIdx, dragCards)
-    local targetPile = piles:get(targetPileIdx)
-    
-    -- Drop anywhere except Stock
-    return targetPile.type ~= PileType.Stock
-end
-
--- Called by C++ AFTER a successful drop to handle game-specific rules (like flipping the newly exposed card).
-function AfterMove(piles, sourcePileIdx, targetPileIdx, cardIdx)
-    local sourcePile = piles:get(sourcePileIdx)
-    if not sourcePile.cards:empty() then
-        sourcePile.cards:back().faceUp = true
-    end
-
-    AddScore(15) -- Gain points for making a successful move
-end
-
--- Called by C++ when a pile is clicked without dragging (e.g., clicking the Stock pile).
-function HandleClick(piles, pileIdx)
-    local p = piles:get(pileIdx)
-    
-    -- Deal cards from Stock to Waste
-    if p.type == PileType.Stock then
-        local waste = piles:get(2)
-        if not p.cards:empty() then
-            local c = p.cards:back()
-            p.cards:pop_back()
-            c.faceUp = true
-            waste.cards:push_back(c)
-        else
-            AddScore(-5) -- Penalty for recycling the deck
-            -- Recycle waste back to stock
-            while not waste.cards:empty() do
-                local c = waste.cards:back()
-                waste.cards:pop_back()
-                c.faceUp = false
-                p.cards:push_back(c)
+function HandleAction(piles,action)
+    game.piles=piles
+    if action=="main" then HandleClick(piles,3)
+    elseif action=="hint" then game:Hint()
+    elseif action=="safe" then
+        local moved=false
+        for i=0,4 do
+            if i~=3 then
+                local cards=piles:get(i).cards
+                if not cards:empty() then piles:get(5).cards:push_back(cards:take_back()); moved=true end
             end
         end
+        if moved then game:Record() end
     end
 end
-
--- Called by C++ every frame if no drag is happening. 
--- Return a table formatted as {sourcePileIdx, targetPileIdx, cardIdx} to automatically move a card, or {} to do nothing.
-function AutoSolve(piles)
-    -- Example AutoSolve: automatically move Aces from Tableau to Foundation
-    local tableau = piles:get(0)
-    if not tableau.cards:empty() then
-        local topCard = tableau.cards:back()
-        if topCard.rank == Rank.Ace then
-            return {0, 3, tableau.cards:size() - 1}
-        end
-    end
-    return {}
-end
-
--- Called by C++ every frame to check if the fireworks should trigger.
-function IsWon(piles)
-    -- Example condition: game is won if the Tableau (pile 0) is completely empty
-    return piles:size() > 0 and piles:get(0).cards:empty()
-end
-
--- Called by C++ every frame to draw custom graphics/text on the board.
+function IsWon() return game:Progress()==52 end
+function AutoSolve(piles) game.piles=piles; game:Layout(); return {} end
+function SaveState() return game:SaveState() end
+function LoadState(piles,data) game:LoadState(piles,data) end
+function DrawBackground() game:Background() end
 function Draw()
-    -- DrawBoardText coordinates scale identically to the Pile positioning
-    DrawBoardText(20.0, 210.0, "Tableau")
-    DrawBoardText(20.0, 10.0, "Stock")
-    DrawBoardText(180.0, 10.0, "Waste")
-    DrawBoardText(380.0, 10.0, "Foundation")
-    
-    local time = GetTime()
-    local mins = math.floor(time / 60)
-    local secs = math.floor(time % 60)
-    DrawBoardText(20.0, 480.0, string.format("Time: %02d:%02d   Score: %d", mins, secs, GetScore()))
-
-    DrawBoardText(20.0, 520.0, "Move all cards from the Tableau to the Foundation to see the fireworks!")
-
-    -- DrawBoardButton returns true when clicked
-    if DrawBoardButton(20.0, 560.0, 200.0, 40.0, "Click Me! (" .. ButtonClickCount .. ")") then
-        ButtonClickCount = ButtonClickCount + 1
-    end
+    game:Draw()
+    game:Text(120,140,"STOCK",Theme.EmptyPileText,16)
+    game:Text(290,140,"WASTE",Theme.EmptyPileText,16)
+    game:Text(800,140,"ARCHIVE",Theme.CardHover,16)
+    for i=0,2 do game:Text(120+i*260,307,"WORK COLUMN "..(i+1),Theme.EmptyPileText,16) end
 end

@@ -6,7 +6,12 @@ Cardbox is a lightweight, scriptable Solitaire and card game engine built in C++
 
 * **Scriptable Games**: Write your own card games using simple Lua scripts.
 * **Smooth UI**: Fast, responsive, and animated card movements.
+* **Game Themes**: Every bundled Lua game controls its window background, menus,
+  toolbar, buttons, and card slots. Palettes range from Klondike's slate blue and
+  FreeCell's teal to Pyramid's sandstone and Hold'em's burgundy and gold.
 * **Quality of Life**: Built-in undo/redo stack, smart drag-and-drop with magnetic snapping, and auto-solve mechanics.
+* **Game Controls**: Each game has a progress display and its own actions. Solitaire
+  games include legal-move hints, move counts, and explicit safe foundation moves.
 * **Particle Effects**: Soft move sparkles, motion-driven drag trails, and timed
   victory confetti with tumbling card suits. A separate particle system handles
   fixed-step physics, DPI scaling, and a reusable buffer capped at 1,024 particles.
@@ -25,7 +30,32 @@ weapons with their alternative buttons. Advance when at most one non-monster
 remains, carrying that encounter forward. Clear the deck and final room to win.
 Score counts gold carried, 5 points per monster defeated, and 2 per remaining HP
 on victory. **Ctrl+Z / Ctrl+Y** undo and redo the entire dungeon state; **F2**
-starts a new run.
+starts a new run. The **Advice** button suggests an encounter and explains its
+cost; the board also provides Undo, Redo, and New run controls.
+
+## Bundled games
+
+| Script | Rules and controls |
+| --- | --- |
+| `klondike.lua` | Draw one, unlimited redeals; alternating-color runs, Kings in empty columns, optional safe foundation moves. |
+| `freecell.lua` | Group capacity uses spare cells and columns, excluding an empty destination; foundations can be moved back. |
+| `yukon.lua` | Any face-up group can move when its bottom card fits; exposed cards flip after moves. |
+| `spider.lua` | One suit, 104 cards; ten-card stock rows require every column to be occupied, and complete same-suit runs are collected together. |
+| `golf.lua` | Click or drag exposed cards; King/Ace wrap, no stock recycling, and a no-moves status when stuck. |
+| `pyramid.lua` | Click pairs totaling 13 or drag onto a partner; click exposed Kings to remove them; two stock redeals. |
+| `dungeon.lua` | Combat previews, alternative encounter actions, camp, retreat, room carry, and advice. |
+| `hanoi.lua` | Choose 3–7 disks; drag or select source/destination pegs; track moves against the optimal solution. |
+| `texas_holdem.lua` | Eight-seat tournament; legal minimum raises and all-ins, contribution-based side pots, clockwise odd-chip payouts, heads-up blinds, and pause/step bots. |
+| `example.lua` | A solvable tutorial: archive all 52 cards, with stock draws, work columns, and batch archive controls. |
+| `malicious.lua` | Fourteen individually protected sandbox probes, with a persistent, undoable pass/fail report. |
+
+Every script saves its logical counters and state for undo/redo. Hold'em also
+restores its random state so repeating a bot action produces the same result;
+undo pauses the bots until Resume is selected. Hints and selections do not create
+history entries. Next hand is explicit, so results remain available for review.
+The Spider stock restriction follows [Bicycle's rules](https://bicyclecards.com/how-to-play/spider-solitaire);
+Hold'em betting, heads-up play, and side pots follow
+[PokerStars' rules](https://www.pokerstars.com/help/articles/poker-rules-master/229178/).
 
 ## Lua game hooks
 
@@ -36,6 +66,16 @@ Use `PerformAction(name)` in drawing code to queue `HandleAction(piles, name)`
 after drawing finishes. These actions share the history and rollback behavior of
 card clicks. `cards:take_back()` removes and returns a card by value, so scripts
 can safely move it between piles.
+
+The engine loads a sibling `lib/solitaire.lua` when present. Bundled solitaire
+scripts use it for shared layout, hints, and counters while keeping rule decisions
+in each script. The build copies both games and their support library into
+`build/rules/`, including after changes that only touch Lua files.
+`HandleClick(piles, pileIdx, cardIdx)` receives the clicked card index (`-1` for an
+empty slot), allowing scripts to reject clicks on covered cards. Older two-argument
+callbacks still work. `CanUndo()` and `CanRedo()` report available history;
+`PerformAction("engine:undo")`, `"engine:redo"`, and `"engine:restart"` queue board
+controls that also work after victory.
 
 `DrawBackground()` draws before the cards. `DrawBoardPanel`, `DrawBoardTooltip`,
 and `EmitBoardParticles` use the same logical coordinates as the piles.
@@ -107,6 +147,9 @@ ctest --test-dir build --output-on-failure
 
 Tests are enabled by default; use `-DBUILD_TESTING=OFF` when configuring to
 build only the application. Lua rules may request 1–8 decks with `NumDecks`.
+Tests cover all bundled games' rule decisions, card conservation, stock limits,
+poker payouts and chip conservation, history, sandbox probes, particles, and
+headless ImGui rendering with unique board button IDs.
 Invalid vector accesses and card ranks/suits raise Lua errors. Rule files
 must contain Lua source text.
 

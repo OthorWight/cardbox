@@ -81,6 +81,7 @@ public:
 private:
     friend struct GameTestAccess;
     friend struct DungeonTestAccess;
+    friend struct RulesTestAccess;
     // Must outlive the Lua state whose allocator references it.
     size_t m_luaAllocatedMemory = 0;
     sol::state m_lua;
@@ -145,6 +146,7 @@ private:
 
     // Core game methods
     void SetupLuaBindings();
+    void LoadLuaSupport(const std::string& scriptPath);
     void LoadAvailableGames();
     void CreateDeck(std::vector<Card>& deck, lua_Integer numDecks = 1);
     void ShuffleDeck(std::vector<Card>& deck);
@@ -152,9 +154,9 @@ private:
     bool CanPickup(int pileIdx, int cardIdx);
     bool CanDrop(int sourcePileIdx, const std::vector<Card>& cards, int targetPileIdx);
     void DoMove(int sourcePileIdx, int targetPileIdx, int cardIdx);
-    void HandleClick(int pileIdx); // For things like stock pile clicking
+    void HandleClick(int pileIdx, int cardIdx = -1);
     void HandleAction(const std::string& action);
-    void HandleScriptAction(const char* callback, const sol::object& argument);
+    void HandleScriptAction(const char* callback, const sol::object& argument, std::optional<int> cardIdx = std::nullopt);
     void DrawScriptLayer(const char* callback);
     
     // Refactored UpdateAndDraw helpers

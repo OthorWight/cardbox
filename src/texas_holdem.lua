@@ -1,93 +1,33 @@
 GameName = "Hold'em"
-NumDecks = 1
-AutoCenter = true
-HelpText = "Fully playable 8-Player Texas Hold'em against 7 Bots!\nIncludes betting, folding, and hand evaluations."
 
--- 0: Ready to Deal, 1: Flop, 2: Turn, 3: River, 4: Showdown, 5: Done
-GameState = "Ready" 
-Dealer = 8
-CurrentTurn = 1
-Pot = 0
-CurrentBet = 0
-Players = {}
-LogMsg = "Welcome to Texas Hold'em!"
-PilesRef = nil
-BotDelay = 0.0
-PlayerRaiseAmount = 20
-SmallBlindIdx = 0
-BigBlindIdx = 0
-NextHandTimer = 0.0
-
-p_coords = {
-    ImVec2.new(645.0, 520.0), -- P1 (Human, Bottom)
-    ImVec2.new(300.0, 470.0), -- P2 (Bottom Left)
-    ImVec2.new(180.0, 280.0), -- P3 (Mid Left)
-    ImVec2.new(300.0, 90.0),  -- P4 (Top Left)
-    ImVec2.new(645.0, 40.0),  -- P5 (Top)
-    ImVec2.new(990.0, 90.0),  -- P6 (Top Right)
-    ImVec2.new(1110.0, 280.0),-- P7 (Mid Right)
-    ImVec2.new(990.0, 470.0)  -- P8 (Bottom Right)
+-- Burgundy and gold window theme. Colors use RGB or RGBA byte channels.
+Theme = {
+    Background = {28, 18, 26}, BackgroundBottom = {18, 12, 18},
+    Toolbar = {40, 25, 34}, ButtonRounding = 6,
+    EmptyPile = {40, 25, 34, 180}, EmptyPileBorder = {103, 71, 81},
+    EmptyPileText = {189, 160, 174}, CardBack = {68, 37, 51},
+    CardBorder = {103, 71, 81}, CardHover = {238, 198, 126},
+    Colors = {
+        Text = {245, 233, 226}, TextDisabled = {189, 160, 174},
+        WindowBg = {40, 25, 34}, ChildBg = {40, 25, 34},
+        PopupBg = {53, 33, 44}, MenuBarBg = {40, 25, 34},
+        Border = {103, 71, 81}, BorderShadow = {0, 0, 0, 0},
+        FrameBg = {77, 45, 58}, FrameBgHovered = {99, 61, 75},
+        FrameBgActive = {122, 80, 91}, Button = {77, 45, 58},
+        ButtonHovered = {99, 61, 75}, ButtonActive = {122, 80, 91},
+        Header = {77, 45, 58}, HeaderHovered = {99, 61, 75},
+        HeaderActive = {122, 80, 91}, TitleBg = {40, 25, 34},
+        TitleBgActive = {53, 33, 44}, TitleBgCollapsed = {40, 25, 34},
+        Separator = {103, 71, 81}, SeparatorHovered = {238, 198, 126},
+        SeparatorActive = {238, 198, 126}, ScrollbarBg = {28, 18, 26},
+        ScrollbarGrab = {103, 71, 81}, ScrollbarGrabHovered = {99, 61, 75},
+        ScrollbarGrabActive = {122, 80, 91}, CheckMark = {238, 198, 126},
+        SliderGrab = {238, 198, 126}, SliderGrabActive = {238, 198, 126},
+        TextSelectedBg = {238, 198, 126, 65}, NavCursor = {238, 198, 126},
+        ModalWindowDimBg = {18, 12, 18, 190}
+    }
 }
 
-function Init(piles, deck)
-    GameState = "Ready"
-    for i=1,8 do
-        Players[i] = { chips = 1000, bet = 0, folded = false, is_bot = (i ~= 1), hand_eval = "", acted_this_round = false }
-    end
-    Dealer = 8
-    Pot = 0
-    CurrentBet = 0
-    LogMsg = "Welcome to Texas Hold'em!"
-    BotDelay = 0.0
-    NextHandTimer = 0.0
-    
-    local stock = Pile.new()
-    stock.id = 0
-    stock.type = PileType.Stock
-    stock.pos = ImVec2.new(1150.0, 50.0)
-    stock.size = ImVec2.new(100.0, 140.0)
-    stock.offset = ImVec2.new(0.2, -0.5)
-    piles:push_back(stock)
-
-    local burn = Pile.new()
-    burn.id = 1
-    burn.type = PileType.Invisible
-    burn.pos = ImVec2.new(-1000.0, -1000.0)
-    burn.size = ImVec2.new(100.0, 140.0)
-    burn.offset = ImVec2.new(0, 0)
-    piles:push_back(burn)
-
-    for i = 0, 4 do
-        local p = Pile.new()
-        p.id = 2 + i
-        p.type = PileType.FreeCellSlot
-        p.pos = ImVec2.new(430.0 + i * 110.0, 280.0)
-        p.size = ImVec2.new(100.0, 140.0)
-        p.offset = ImVec2.new(0, 0)
-        piles:push_back(p)
-    end
-
-    for i = 1, 8 do
-        local p = Pile.new()
-        p.id = 6 + i
-        p.type = PileType.Tableau
-        p.pos = p_coords[i]
-        p.size = ImVec2.new(100.0, 140.0)
-        p.offset = ImVec2.new(30.0, 0.0)
-        piles:push_back(p)
-    end
-
-    while not deck:empty() do
-        local c = deck:back()
-        c.faceUp = false
-        piles:get(0).cards:push_back(c)
-        deck:pop_back()
-    end
-end
-
--- -------------------------------------------------------------
--- Poker Hand Evaluator
--- -------------------------------------------------------------
 function EvaluateHand(cards)
     local r_counts = {}; local s_counts = {}
     for i=2,14 do r_counts[i] = {} end
@@ -197,446 +137,382 @@ function EvaluateHand(cards)
     return k[1] * 65536 + k[2] * 4096 + k[3] * 256 + k[4] * 16 + k[5], "High Card"
 end
 
--- -------------------------------------------------------------
--- Game Logic
--- -------------------------------------------------------------
-function DealCard(piles, targetPileIdx, faceUp)
-    local deck = piles:get(0)
-    if not deck.cards:empty() then
-        local c = deck.cards:back()
-        deck.cards:pop_back()
-        c.faceUp = faceUp
-        piles:get(targetPileIdx).cards:push_back(c)
+
+NumDecks=1
+AutoCenter=false
+CardSize=ImVec2.new(76,106)
+HelpText=[[An eight-seat no-limit Hold'em tournament with 1,000 play chips per seat.
+Blinds are 10/20. Call, check, fold, or raise by at least the last full raise. Smaller all-in raises do not reopen betting for players who already acted. Side pots restrict winnings to each player's contribution; odd chips go clockwise from the dealer.
+The dealer is the small blind in heads-up play. Bots use only their hole cards and the board. Pause or step bots to study a hand. Undo restores bets, chips, cards, and the bot random state; it pauses bots until you resume them. Next hand is an explicit action. F2 starts a new tournament.]]
+
+Poker={}
+local PilesRef,Paused,NextActionAt=nil,false,0
+local Seats={{560,520},{170,470},{60,295},{170,135},{560,115},{950,135},{1110,295},{950,470}}
+local function Clock() return GetTime() end
+local function Random()
+    Poker.rng=(Poker.rng*48271)%2147483647
+    return Poker.rng/2147483647
+end
+local function Active()
+    local players,able={},{}
+    for i=1,8 do
+        if not Poker.players[i].folded then
+            players[#players+1]=i
+            if Poker.players[i].chips>0 then able[#able+1]=i end
+        end
+    end
+    return players,able
+end
+local function NextLive(start)
+    for step=1,8 do
+        local i=(start+step-1)%8+1
+        if Poker.players[i].chips>0 then return i end
     end
 end
-
-function ShuffleDeck(deck)
-    for i=0, deck.cards:size()-1 do
-        local j = math.random(0, deck.cards:size()-1)
-        local c1 = deck.cards:get(i)
-        local c2 = deck.cards:get(j)
-        local tr, ts = c1.rank, c1.suit
-        c1.rank, c1.suit = c2.rank, c2.suit
-        c2.rank, c2.suit = tr, ts
-    end
+local function AddPile(piles,id,kind,x,y,offset)
+    local pile=Pile.new(); pile.id,pile.type=id,kind
+    pile.pos,pile.size,pile.offset=ImVec2.new(x,y),CardSize,offset or ImVec2.new(0,0)
+    piles:push_back(pile)
 end
-
-function StartBettingRound(piles, phase)
-    GameState = phase
-    for i=1,8 do 
-        Players[i].bet = 0 
-        Players[i].acted_this_round = false
+function Init(piles,deck)
+    Poker={phase="Ready",dealer=8,turn=1,pot=0,bet=0,minRaise=20,raise=20,hand=0,sb=0,bb=0,lastPot=0,
+        rng=math.random(1,2147483646),log="Start a tournament. Eight players, 8,000 chips in play.",players={}}
+    PilesRef,Paused,NextActionAt=piles,false,0
+    for i=1,8 do Poker.players[i]={chips=1000,bet=0,total=0,folded=false,acted=false,actedAt=0,payout=0} end
+    AddPile(piles,0,PileType.Stock,1160,130,ImVec2.new(0.1,-0.2))
+    AddPile(piles,1,PileType.Invisible,-1000,-1000)
+    for i=0,4 do AddPile(piles,2+i,PileType.Tableau,430+i*84,285) end
+    for i=1,8 do AddPile(piles,6+i,PileType.Tableau,Seats[i][1],Seats[i][2],ImVec2.new(42,0)) end
+    piles:get(0).cards=deck
+    SetScore(1000)
+end
+local function Deal(piles,target,faceUp)
+    assert(not piles:get(0).cards:empty(),"Poker deck exhausted")
+    local card=piles:get(0).cards:take_back(); card.faceUp=faceUp
+    piles:get(target).cards:push_back(card)
+end
+local function Bet(index,amount)
+    local player=Poker.players[index]
+    amount=math.min(player.chips,math.max(0,math.floor(amount)))
+    player.chips,player.bet,player.total=player.chips-amount,player.bet+amount,player.total+amount
+    Poker.pot=Poker.pot+amount
+    return amount
+end
+local function NeedsAction(index)
+    local p=Poker.players[index]
+    if p.folded or p.chips==0 then return false end
+    local _,able=Active()
+    return p.bet<Poker.bet or (#able>1 and not p.acted)
+end
+local function RoundOver()
+    for i=1,8 do if NeedsAction(i) then return false end end
+    return true
+end
+local function ChooseTurn(start)
+    for step=0,7 do
+        local i=(start+step-1)%8+1
+        if NeedsAction(i) then Poker.turn=i; NextActionAt=Clock()+0.6; return end
     end
-    CurrentBet = 0
-    PlayerRaiseAmount = 20
-    
-    local first_actor = (Dealer % 8) + 1
-    if phase == "PreFlop" then
-        for r=1,2 do
+    Poker.turn=0
+end
+local function StartRound(piles,phase)
+    Poker.phase,Poker.bet,Poker.minRaise,Poker.raise=phase,0,20,20
+    for i=1,8 do
+        local p=Poker.players[i]; p.bet,p.acted,p.actedAt=0,false,0
+    end
+    local first=Poker.dealer%8+1
+    if phase=="PreFlop" then
+        local active=Active()
+        Poker.sb=#active==2 and Poker.dealer or NextLive(Poker.dealer)
+        Poker.bb=NextLive(Poker.sb)
+        Bet(Poker.sb,10); Bet(Poker.bb,20)
+        Poker.bet=20
+        local _,able=Active()
+        if #able<2 then
+            -- With no opponent able to raise, only the actual blind wager
+            -- needs matching; a short blind does not force a refundable bet.
+            Poker.bet=0
             for i=1,8 do
-                if not Players[i].folded then
-                    local p_idx = i == 1 and 7 or (i + 6)
-                    DealCard(piles, p_idx, i == 1)
-                end
+                if not Poker.players[i].folded then Poker.bet=math.max(Poker.bet,Poker.players[i].bet) end
             end
         end
-        
-        local sb_idx = first_actor
-        while Players[sb_idx].chips == 0 do sb_idx = (sb_idx % 8) + 1 end
-        local bb_idx = (sb_idx % 8) + 1
-        while Players[bb_idx].chips == 0 do bb_idx = (bb_idx % 8) + 1 end
-        
-        SmallBlindIdx = sb_idx
-        BigBlindIdx = bb_idx
-
-        PlaceBet(sb_idx, 10)
-        PlaceBet(bb_idx, 20)
-        CurrentBet = 20
-        first_actor = (bb_idx % 8) + 1
+        first=(Poker.bb%8)+1
     end
-
-    local loop_safe = 0
-    while (Players[first_actor].folded or Players[first_actor].chips == 0) and loop_safe < 8 do
-        first_actor = (first_actor % 8) + 1
-        loop_safe = loop_safe + 1
-    end
-    
-    CurrentTurn = first_actor
-    if Players[CurrentTurn].is_bot then BotDelay = 0.5 end
+    ChooseTurn(first)
 end
-
-function PlaceBet(idx, amount)
-    local p = Players[idx]
-    if p.chips < amount then amount = p.chips end
-    p.chips = p.chips - amount
-    p.bet = p.bet + amount
-    Pot = Pot + amount
-end
-
-function DoShowdown(piles)
-    for i=8,14 do
-        local p = piles:get(i)
-        for c_idx=0, p.cards:size()-1 do p.cards:get(c_idx).faceUp = true end
-    end
-
-    local comm = {}
-    for i=2,6 do
-        local p = piles:get(i)
-        if not p.cards:empty() then table.insert(comm, p.cards:get(0)) end
-    end
-
-    local best_score = -1
-    local winners = {}
-
-    for i=1,8 do
-        if not Players[i].folded then
-            local p_idx = i == 1 and 7 or (i + 6)
-            local hand = {}
-            for _, c in ipairs(comm) do table.insert(hand, c) end
-            local p = piles:get(p_idx)
-            for c_idx=0, p.cards:size()-1 do table.insert(hand, p.cards:get(c_idx)) end
-            
-            local score, name = EvaluateHand(hand)
-            Players[i].hand_eval = name
-            if score > best_score then
-                best_score = score
-                winners = {i}
-            elseif score == best_score then
-                table.insert(winners, i)
-            end
-        end
-    end
-
-    local pot_split = math.floor(Pot / #winners)
-    local win_names = ""
-    for _, w in ipairs(winners) do
-        Players[w].chips = Players[w].chips + pot_split
-        win_names = win_names .. "Player " .. w .. " "
-    end
-    local total_won = Pot
-    LogMsg = win_names .. "wins " .. total_won .. " chips with " .. Players[winners[1]].hand_eval .. "!"
-    NextHandTimer = 10.0
-end
-
-function AdvancePhase(piles)
-    if GameState == "PreFlop" then
-        DealCard(piles, 1, false) 
-        for i=2,4 do DealCard(piles, i, true) end
-        StartBettingRound(piles, "Flop")
-    elseif GameState == "Flop" then
-        DealCard(piles, 1, false)
-        DealCard(piles, 5, true)
-        StartBettingRound(piles, "Turn")
-    elseif GameState == "Turn" then
-        DealCard(piles, 1, false)
-        DealCard(piles, 6, true)
-        StartBettingRound(piles, "River")
-    elseif GameState == "River" then
-        GameState = "Showdown"
-        DoShowdown(piles)
-    end
-end
-
-function CheckWinEarly(piles)
-    local active_count = 0
-    local winner = 0
-    for i=1,8 do if not Players[i].folded then active_count = active_count + 1; winner = i end end
-    if active_count == 1 then
-        local won_amount = Pot
-        Players[winner].chips = Players[winner].chips + Pot
-        GameState = "Showdown"
-        LogMsg = "Player " .. winner .. " wins " .. won_amount .. " chips by default!"
-        NextHandTimer = 10.0
-        return true
-    end
-    return false
-end
-
-function CheckRoundOver()
-    local active_count = 0
-    for i=1,8 do
-        if not Players[i].folded and Players[i].chips > 0 then
-            active_count = active_count + 1
-        end
-    end
-
-    local unsettled = false
-    for i=1,8 do
-        if not Players[i].folded and Players[i].chips > 0 then
-            if Players[i].bet < CurrentBet then
-                unsettled = true
-            elseif not Players[i].acted_this_round and active_count > 1 then
-                unsettled = true
-            end
-        end
-    end
-    
-    return not unsettled
-end
-
-function FoldPlayer(piles, idx)
-    Players[idx].folded = true
-    Players[idx].acted_this_round = true
-    local p_idx = idx == 1 and 7 or (idx + 6)
-    local p = piles:get(p_idx)
-    local burn = piles:get(1)
-    while not p.cards:empty() do
-        local c = p.cards:back()
-        p.cards:pop_back()
-        burn.cards:push_back(c)
-    end
-end
-
-function NextTurn(piles)
-    if CheckWinEarly(piles) then return end
-    if CheckRoundOver() then return end
-
-    local start = CurrentTurn
-    repeat
-        CurrentTurn = (CurrentTurn % 8) + 1
-        if CurrentTurn == start then break end
-    until not Players[CurrentTurn].folded and Players[CurrentTurn].chips > 0
-
-    if Players[CurrentTurn].is_bot then BotDelay = 0.5 end
-end
-
-function TakeBotAction(piles, idx)
-    local p = Players[idx]
-    p.acted_this_round = true
-    local to_call = CurrentBet - p.bet
-    
-    -- 1. Gather cards visible to the bot (hole cards + community)
-    local hand = {}
-    local comm = {}
-    for i=2,6 do
-        local cp = piles:get(i)
-        if not cp.cards:empty() then
-            table.insert(hand, cp.cards:get(0))
-            table.insert(comm, cp.cards:get(0))
-        end
-    end
-    local p_idx = idx == 1 and 7 or (idx + 6)
-    local player_pile = piles:get(p_idx)
-    for c_idx=0, player_pile.cards:size()-1 do
-        table.insert(hand, player_pile.cards:get(c_idx))
-    end
-
-    -- 2. Evaluate the hand and calculate a rough strength (0.0 to 1.0)
-    local score, _ = EvaluateHand(hand)
-    local comm_score = 0
-    if #comm > 0 then
-        comm_score, _ = EvaluateHand(comm)
-    end
-    local strength = 0.0
-    
-    -- Score > 2,000,000 is Two Pair or better
-    if score >= 2000000 then 
-        strength = 0.9
-    -- Score > 1,000,000 is a Pair
-    elseif score >= 1000000 then 
-        strength = 0.6
-    -- High card: scale based on highest card (Aces = ~917504)
-    else 
-        strength = math.min(0.4, score / 2500000.0) 
-    end
-
-    -- If our hand score is exactly equal to the board's score, we are "playing the board".
-    -- We have no advantage and should drastically reduce our betting strength.
-    if score == comm_score then
-        if score >= 4000000 then
-            strength = 0.4 -- The board is very strong (Straight+), be cautious but willing to call small bets
-        else
-            strength = 0.1 -- The board is weak and we have nothing, give up
-        end
-    end
-
-    -- Add a little bit of bluffing/randomness variance (-0.2 to +0.2)
-    strength = strength + (math.random() * 0.4 - 0.2)
-
-    -- Calculate pot odds (how much it costs to call relative to the pot)
-    local pot_odds = to_call / (Pot + to_call)
-    
-    -- Consider the bot "pot committed" if their remaining stack is tiny compared to the pot
-    local pot_committed = (p.chips < Pot * 0.2)
-
-    if to_call > 0 then
-        if strength < pot_odds and not pot_committed then
-            FoldPlayer(piles, idx)
-            LogMsg = "Bot " .. idx .. " folded."
-        elseif strength < 0.7 or p.chips <= to_call then
-            PlaceBet(idx, to_call)
-            LogMsg = "Bot " .. idx .. " calls " .. to_call .. "."
-        else
-            -- Raise sizing: 50% to 100% of the current pot!
-            local raise = to_call + math.floor(Pot * (math.random(5, 10) / 10.0))
-            PlaceBet(idx, raise)
-            CurrentBet = p.bet
-            LogMsg = "Bot " .. idx .. " raises to " .. p.bet .. "!"
-        end
-    else
-        if strength < 0.5 then
-            LogMsg = "Bot " .. idx .. " checks."
-        else
-            -- Bet sizing: 50% to 100% of the current pot!
-            local bet_amount = math.floor(Pot * (math.random(5, 10) / 10.0))
-            if bet_amount < 20 then bet_amount = 20 end -- Minimum bet
-            PlaceBet(idx, bet_amount)
-            CurrentBet = p.bet
-            LogMsg = "Bot " .. idx .. " bets " .. bet_amount .. "."
-        end
-    end
-end
-
-function ResetHand(piles)
+function PokerStartHand(piles)
+    local live=0
+    for i=1,8 do if Poker.players[i].chips>0 then live=live+1 end end
+    if live<2 or Poker.players[1].chips==0 then return end
     for i=1,14 do
-        local p = piles:get(i)
-        while not p.cards:empty() do
-            local c = p.cards:back()
-            p.cards:pop_back()
-            c.faceUp = false
-            piles:get(0).cards:push_back(c)
-        end
+        local cards=piles:get(i).cards
+        while not cards:empty() do local card=cards:take_back(); card.faceUp=false; piles:get(0).cards:push_back(card) end
     end
-    ShuffleDeck(piles:get(0))
-
-    Dealer = (Dealer % 8) + 1
-    Pot = 0
-    local active_players = 0
+    local deck=piles:get(0).cards
+    for i=deck:size()-1,1,-1 do
+        local j=math.floor(Random()*(i+1))
+        local a,b=deck:get(i),deck:get(j)
+        a.rank,b.rank=b.rank,a.rank; a.suit,b.suit=b.suit,a.suit
+        a.faceUp,b.faceUp=false,false
+    end
+    Poker.dealer=NextLive(Poker.dealer)
+    Poker.hand,Poker.pot,Poker.lastPot=Poker.hand+1,0,0
     for i=1,8 do
-        Players[i].bet = 0
-        Players[i].hand_eval = ""
-        if Players[i].chips == 0 then
-            Players[i].folded = true
-        else
-            Players[i].folded = false
-            active_players = active_players + 1
+        local p=Poker.players[i]
+        p.bet,p.total,p.payout,p.acted,p.actedAt,p.folded=0,0,0,false,0,p.chips==0
+    end
+    for round=1,2 do
+        for offset=1,8 do
+            local seat=(Poker.dealer+offset-1)%8+1
+            if not Poker.players[seat].folded then Deal(piles,6+seat,seat==1) end
         end
     end
-
-    if active_players < 2 then
-        GameState = "Showdown"
-        LogMsg = "Game over! Not enough players. Press F2 to restart."
-        NextHandTimer = 0.0
-        return
-    end
-    StartBettingRound(piles, "PreFlop")
+    Poker.log="Hand "..Poker.hand..". Blinds 10 / 20."
+    Paused=false
+    StartRound(piles,"PreFlop")
 end
-
--- Disable manual dragging
-function CanPickup(piles, pileIdx, cardIdx) return false end
-function CanDrop(piles, sourcePileIdx, targetPileIdx, dragCards) return false end
-function AfterMove(piles, sourcePileIdx, targetPileIdx, cardIdx) end
-function HandleClick(piles, pileIdx) end
-
--- -------------------------------------------------------------
--- Game Loop & Rendering
--- -------------------------------------------------------------
-function AutoSolve(piles)
-    PilesRef = piles
-    if GameState == "Showdown" then
-        if NextHandTimer > 0 then
-            NextHandTimer = NextHandTimer - 0.016
-            if NextHandTimer <= 0 then
-                ResetHand(piles)
+local function Hand(piles,index)
+    local hand={}
+    for i=2,6 do
+        local cards=piles:get(i).cards
+        if not cards:empty() then hand[#hand+1]=cards:back() end
+    end
+    local cards=piles:get(6+index).cards
+    for i=0,cards:size()-1 do hand[#hand+1]=cards:get(i) end
+    return hand
+end
+function PokerSettle(piles)
+    if Poker.phase=="Showdown" or Poker.phase=="Finished" or Poker.phase=="Eliminated" then return end
+    local levels,seen,scores={},{},{}
+    for i=1,8 do
+        local p=Poker.players[i]; p.payout=0
+        if p.total>0 and not seen[p.total] then levels[#levels+1]=p.total; seen[p.total]=true end
+        if not p.folded then
+            scores[i]=EvaluateHand(Hand(piles,i))
+            local cards=piles:get(6+i).cards
+            for j=0,cards:size()-1 do cards:get(j).faceUp=true end
+        end
+    end
+    table.sort(levels)
+    local previous,awarded=0,0
+    for _,level in ipairs(levels) do
+        local contributors,eligible={},{}
+        for i=1,8 do
+            if Poker.players[i].total>=level then
+                contributors[#contributors+1]=i
+                if not Poker.players[i].folded then eligible[#eligible+1]=i end
             end
         end
-        return {}
-    end
-    if GameState == "Ready" then return {} end
-    
-    if CheckRoundOver() then
-        AdvancePhase(piles)
-        return {}
-    end
-
-    if Players[CurrentTurn].is_bot and not Players[CurrentTurn].folded and Players[CurrentTurn].chips > 0 then
-        BotDelay = BotDelay - 0.016
-        if BotDelay <= 0 then
-            TakeBotAction(piles, CurrentTurn)
-            NextTurn(piles)
+        local amount=(level-previous)*#contributors
+        local winners,best={},-1
+        if #contributors==1 then winners=contributors -- unmatched chips are returned, even to a folded seat
+        elseif #eligible==0 then
+            -- A defensive refund for an inconsistent externally supplied state.
+            for _,i in ipairs(contributors) do
+                Poker.players[i].payout=Poker.players[i].payout+(level-previous)
+            end
+        else
+            for _,i in ipairs(eligible) do
+                if scores[i]>best then best,winners=scores[i],{i}
+                elseif scores[i]==best then winners[#winners+1]=i end
+            end
         end
+        if #winners>0 then
+            table.sort(winners,function(a,b) return (a-Poker.dealer-1)%8<(b-Poker.dealer-1)%8 end)
+            local share,extra=math.floor(amount/#winners),amount%#winners
+            for n,i in ipairs(winners) do Poker.players[i].payout=Poker.players[i].payout+share+(n<=extra and 1 or 0) end
+        end
+        awarded,previous=awarded+amount,level
     end
+    assert(awarded==Poker.pot,"Poker contributions do not match the pot")
+    local results={}
+    for i=1,8 do
+        local p=Poker.players[i]; p.chips=p.chips+p.payout
+        if p.payout>0 then results[#results+1]=(i==1 and "You" or "P"..i).." +"..p.payout end
+    end
+    Poker.lastPot,Poker.pot,Poker.turn=Poker.pot,0,0
+    Poker.phase="Showdown"
+    Poker.log="Hand settled: "..table.concat(results,", ").."."
+    local funded=0
+    for i=1,8 do if Poker.players[i].chips>0 then funded=funded+1 end end
+    if Poker.players[1].chips==0 then Poker.phase="Eliminated"; Poker.log=Poker.log.." You are out. Start a new tournament."
+    elseif funded==1 then Poker.phase="Finished"; Poker.log="You won the tournament! All 8,000 chips are yours." end
+    SetScore(Poker.players[1].chips)
+end
+local function Advance(piles)
+    local active=Active()
+    if #active==1 or Poker.phase=="River" then PokerSettle(piles); return end
+    Deal(piles,1,false)
+    if Poker.phase=="PreFlop" then
+        for i=2,4 do Deal(piles,i,true) end
+        StartRound(piles,"Flop")
+    elseif Poker.phase=="Flop" then Deal(piles,5,true); StartRound(piles,"Turn")
+    elseif Poker.phase=="Turn" then Deal(piles,6,true); StartRound(piles,"River") end
+end
+local function CanRaise(index)
+    local p=Poker.players[index]
+    local _,able=Active()
+    return #able>1 and p.chips>math.max(0,Poker.bet-p.bet) and
+        (not p.acted or Poker.bet-p.actedAt>=Poker.minRaise)
+end
+local function Act(piles,index,action,raise)
+    if Poker.turn~=index or not NeedsAction(index) then return false end
+    local p=Poker.players[index]
+    local call=math.max(0,Poker.bet-p.bet)
+    if action=="fold" then
+        p.folded=true
+        local cards=piles:get(6+index).cards
+        while not cards:empty() do piles:get(1).cards:push_back(cards:take_back()) end
+        Poker.log=(index==1 and "You" or "P"..index).." folded."
+    elseif action=="call" then
+        local paid=Bet(index,call)
+        Poker.log=(index==1 and "You" or "P"..index)..(call==0 and " checked." or " called "..paid..".")
+    elseif action=="raise" then
+        if not CanRaise(index) then return false end
+        local remaining=p.chips-call
+        raise=math.min(math.max(1,math.floor(raise or Poker.raise)),remaining)
+        if raise<Poker.minRaise and raise<remaining then return false end
+        local previous=Poker.bet
+        Bet(index,call+raise); Poker.bet=p.bet
+        local increment=Poker.bet-previous
+        if increment>=Poker.minRaise then
+            Poker.minRaise=increment
+            for i=1,8 do if i~=index then Poker.players[i].acted=false end end
+        end
+        Poker.log=(index==1 and "You" or "P"..index).." raised to "..Poker.bet.."."
+    else return false end
+    p.acted,p.actedAt=true,Poker.bet
+    Poker.raise=Poker.minRaise
+    local active=Active()
+    if #active==1 then PokerSettle(piles) else ChooseTurn(index%8+1) end
+    SetScore(Poker.players[1].chips)
+    return true
+end
+local function Bot(piles,index)
+    local p=Poker.players[index]
+    local score=EvaluateHand(Hand(piles,index))
+    local call=math.max(0,Poker.bet-p.bet)
+    local strength=score>=2000000 and 0.85 or score>=1000000 and 0.55 or 0.25
+    strength=strength+(Random()-0.5)*0.3
+    local odds=call/math.max(1,Poker.pot+call)
+    if call>0 and strength<odds and p.chips>Poker.pot*0.2 then Act(piles,index,"fold")
+    elseif strength>0.65 and CanRaise(index) and Random()<0.5 then
+        Act(piles,index,"raise",math.max(Poker.minRaise,math.floor(Poker.pot/2)))
+    else Act(piles,index,"call") end
+end
+function HandleAction(piles,action)
+    PilesRef=piles
+    if action=="start" and (Poker.phase=="Ready" or Poker.phase=="Showdown") then PokerStartHand(piles)
+    elseif action=="pause" then Paused=not Paused; NextActionAt=Clock()+0.6
+    elseif action=="tick" then
+        if Poker.phase=="Ready" or Poker.phase=="Showdown" or Poker.phase=="Finished" or Poker.phase=="Eliminated" then return end
+        if RoundOver() then Advance(piles)
+        elseif Poker.turn~=1 and Poker.turn>0 then Bot(piles,Poker.turn) end
+        NextActionAt=Clock()+0.6
+    elseif action=="fold" or action=="call" or action=="raise" then Act(piles,1,action,Poker.raise)
+    elseif action=="raise-min" then Poker.raise=Poker.minRaise
+    elseif action=="raise-half" then Poker.raise=math.max(Poker.minRaise,math.floor(Poker.pot/2))
+    elseif action=="raise-max" then Poker.raise=math.max(0,Poker.players[1].chips-math.max(0,Poker.bet-Poker.players[1].bet))
+    elseif action=="raise-less" then Poker.raise=math.max(Poker.minRaise,Poker.raise-10)
+    elseif action=="raise-more" then Poker.raise=Poker.raise+10 end
+end
+function AutoSolve(piles)
+    PilesRef=piles
     return {}
 end
-
-function IsWon(piles)
-    return false
-end
-
-function Draw()
-    DrawBoardText(150.0, 30.0, "Pot: " .. Pot)
-    if LogMsg then DrawBoardText(150.0, 0.0, LogMsg) end
-    
+function CanPickup() return false end
+function CanDrop() return false end
+function AfterMove() end
+function HandleClick() end
+function IsWon() return Poker.phase=="Finished" end
+local scalar={"phase","dealer","turn","pot","bet","minRaise","raise","hand","sb","bb","lastPot","rng"}
+local playerFields={"chips","bet","total","folded","acted","actedAt","payout"}
+function SaveState()
+    local parts={}
+    for _,key in ipairs(scalar) do parts[#parts+1]=Poker[key] end
     for i=1,8 do
-        local px, py = p_coords[i].x, p_coords[i].y
-        
-        local role = ""
-        if GameState ~= "Ready" then
-            if i == Dealer then role = " [D]"
-            elseif i == SmallBlindIdx then role = " [SB]"
-            elseif i == BigBlindIdx then role = " [BB]" end
-        end
-        
-        local info = "P" .. i .. role .. " Chips: " .. Players[i].chips
-        if Players[i].folded then info = info .. " (Folded)"
-        elseif CurrentTurn == i and GameState ~= "Showdown" and GameState ~= "Ready" then info = ">> " .. info .. " <<" end
-        if Players[i].bet > 0 then info = info .. "\nBet: " .. Players[i].bet end
-        if GameState == "Showdown" and Players[i].hand_eval ~= "" then info = info .. "\n" .. Players[i].hand_eval end
-        
-        DrawBoardText(px, py + 150.0, info)
-    end
-
-    if CurrentTurn == 1 and GameState ~= "Showdown" and GameState ~= "Ready" and not Players[1].folded and Players[1].chips > 0 then
-        local to_call = CurrentBet - Players[1].bet
-        
-        if DrawBoardButton(550, 425, 100, 40, "Fold") then
-            FoldPlayer(PilesRef, 1)
-            LogMsg = "You folded."
-            NextTurn(PilesRef)
-        end
-        
-        local call_text = to_call > 0 and ("Call " .. to_call) or "Check"
-        if DrawBoardButton(670, 425, 100, 40, call_text) then
-            PlaceBet(1, to_call)
-            Players[1].acted_this_round = true
-            LogMsg = "You " .. (to_call > 0 and "called." or "checked.")
-            NextTurn(PilesRef)
-        end
-        
-        local can_raise = Players[1].chips > to_call
-        if can_raise then
-            local min_raise = math.max(20, CurrentBet)
-            local max_raise = Players[1].chips - to_call
-            if min_raise > max_raise then min_raise = max_raise end
-
-            if PlayerRaiseAmount > max_raise then PlayerRaiseAmount = max_raise end
-            if PlayerRaiseAmount < min_raise then PlayerRaiseAmount = min_raise end
-
-            if DrawBoardButton(550, 475, 100, 40, "Min") then PlayerRaiseAmount = min_raise end
-            if DrawBoardButton(670, 475, 100, 40, "1/2 Pot") then PlayerRaiseAmount = math.min(max_raise, math.max(min_raise, math.floor(Pot / 2))) end
-
-            if DrawBoardButton(790, 475, 30, 40, "-") then PlayerRaiseAmount = math.max(min_raise, PlayerRaiseAmount - 10) end
-            if DrawBoardButton(825, 475, 30, 40, "+") then PlayerRaiseAmount = math.min(max_raise, PlayerRaiseAmount + 10) end
-            if DrawBoardButton(860, 475, 40, 40, "Max") then PlayerRaiseAmount = max_raise end
-
-            if DrawBoardButton(790, 425, 110, 40, "Raise " .. PlayerRaiseAmount) then
-                PlaceBet(1, to_call + PlayerRaiseAmount)
-                CurrentBet = Players[1].bet
-                Players[1].acted_this_round = true
-                LogMsg = "You raised " .. PlayerRaiseAmount .. "!"
-                PlayerRaiseAmount = math.max(20, CurrentBet)
-                NextTurn(PilesRef)
-            end
+        for _,key in ipairs(playerFields) do
+            local value=Poker.players[i][key]
+            parts[#parts+1]=type(value)=="boolean" and (value and 1 or 0) or value
         end
     end
-
-    if GameState == "Showdown" or GameState == "Ready" then
-        local btn_text = GameState == "Ready" and "Start Game" or "Next Hand"
-        if GameState == "Showdown" and NextHandTimer > 0 then
-            btn_text = btn_text .. " (" .. math.ceil(NextHandTimer) .. ")"
-        end
-        if DrawBoardButton(600, 450, 200, 50, btn_text) then
-            ResetHand(PilesRef)
+    return table.concat(parts,",").."\n"..Poker.log
+end
+function LoadState(piles,data)
+    local header,log=string.match(data,"^([^\n]+)\n(.*)$")
+    assert(header,"Invalid poker snapshot")
+    local parts={}; for value in string.gmatch(header,"[^,]+") do parts[#parts+1]=value end
+    assert(#parts==#scalar+8*#playerFields,"Incomplete poker snapshot")
+    local state,index={players={},log=log},1
+    for _,key in ipairs(scalar) do
+        state[key]=key=="phase" and parts[index] or tonumber(parts[index])
+        assert(state[key]~=nil,"Invalid poker field"); index=index+1
+    end
+    for i=1,8 do
+        state.players[i]={}
+        for _,key in ipairs(playerFields) do
+            local value=assert(tonumber(parts[index]),"Invalid poker player field")
+            state.players[i][key]=(key=="folded" or key=="acted") and value==1 or
+                (key~="folded" and key~="acted" and value or false)
+            index=index+1
         end
     end
+    Poker,PilesRef,Paused,NextActionAt=state,piles,true,Clock()+0.6
+end
+local function Text(x,y,text,color,size,width)
+    color=color or Theme.Colors.Text
+    DrawBoardText(x,y,text,size or 17,width or 0,color[1],color[2],color[3])
+end
+local function Button(x,y,w,label,action,enabled)
+    if DrawBoardButton(x,y,w,36,label,enabled) then PerformAction(action) end
+end
+function DrawBackground()
+    local c=Theme.Toolbar; DrawBoardPanel(40,48,1200,636,c[1],c[2],c[3])
+    c=Theme.Colors.PopupBg; DrawBoardPanel(415,240,438,164,c[1],c[2],c[3])
+end
+function Draw()
+    if not PilesRef then return end
+    Text(62,66,"HOLD'EM",Theme.CardHover,30)
+    Text(255,78,"Hand "..Poker.hand.." / "..Poker.phase,Theme.EmptyPileText,18)
+    Button(900,66,90,"Undo","engine:undo",CanUndo())
+    Button(998,66,90,"Redo","engine:redo",CanRedo())
+    Button(1096,66,122,"New match","engine:restart",true)
+    Text(430,255,"COMMUNITY",Theme.EmptyPileText,16)
+    Text(695,250,"Pot: "..Poker.pot,Theme.CardHover,24)
+    Text(200,310,Poker.log,nil,14,195)
+    Text(875,315,Paused and "Bots paused" or "Bots playing",Theme.EmptyPileText,16)
+    Button(875,347,185,Paused and "Resume bots" or "Pause bots","pause",true)
+    Button(875,390,185,"Step / reveal","tick",Paused and Poker.phase~="Ready" and Poker.phase~="Showdown")
+    for i=1,8 do
+        local p=Poker.players[i]
+        local role=i==Poker.dealer and " D" or i==Poker.sb and " SB" or i==Poker.bb and " BB" or ""
+        local label=(i==1 and "YOU" or "P"..i)..role.." / "..p.chips
+        if p.folded then label=label..(p.chips==0 and " out" or " folded") elseif p.chips==0 then label=label.." all-in" end
+        if p.bet>0 then label=label.."\nBet "..p.bet end
+        if p.payout>0 then label=label.."\nWon "..p.payout end
+        Text(i==5 and 425 or Seats[i][1],i==5 and 163 or Seats[i][2]+112,label,
+            p.folded and Theme.EmptyPileText or i==Poker.turn and Theme.CardHover or nil,14,i==5 and 124 or 175)
+    end
+    if Poker.phase=="Ready" or Poker.phase=="Showdown" then
+        Button(490,440,300,Poker.phase=="Ready" and "Start tournament" or "Next hand","start",true)
+    elseif Poker.phase=="Eliminated" or Poker.phase=="Finished" then
+        Button(490,440,300,"Play a new tournament","engine:restart",true)
+    elseif Poker.turn==1 and NeedsAction(1) then
+        local p=Poker.players[1]
+        local call=math.max(0,Poker.bet-p.bet)
+        Button(440,425,116,"Fold","fold",true)
+        Button(568,425,128,call==0 and "Check" or call>=p.chips and "All-in "..p.chips or "Call "..call,"call",true)
+        local amount=math.min(Poker.raise,math.max(0,p.chips-call))
+        local canRaise=CanRaise(1)
+        Button(708,425,150,not canRaise and "Raise" or amount==p.chips-call and "All-in "..p.chips or "Raise +"..amount,"raise",canRaise)
+        Button(440,475,88,"Min","raise-min",CanRaise(1))
+        Button(536,475,38,"-","raise-less",CanRaise(1))
+        Button(582,475,38,"+","raise-more",CanRaise(1))
+        Button(628,475,108,"Half pot","raise-half",CanRaise(1))
+        Button(744,475,114,"All-in","raise-max",CanRaise(1))
+    else Text(455,438,"Waiting for the next action...",Theme.EmptyPileText,18,350) end
+    -- Queue automation after user controls so a click to pause, undo, or restart
+    -- takes priority over a bot action due in the same frame.
+    if not Paused and Poker.phase~="Ready" and Poker.phase~="Showdown" and Poker.phase~="Finished" and Poker.phase~="Eliminated" and
+        Clock()>=NextActionAt and (RoundOver() or Poker.turn~=1) then PerformAction("tick") end
 end

@@ -48,7 +48,7 @@ local CARD_X, CARD_STEP, CARD_Y = 324, 141, 285
 local FIELDS = {"hp", "gold", "room", "kills", "dur", "potions", "rested",
                 "retreats", "canRetreat", "turns", "finished"}
 local COLORS = {
-    ink = {235, 229, 213}, muted = {155, 169, 184}, gold = {244, 201, 116},
+    ink = Theme.Colors.Text, muted = Theme.EmptyPileText, gold = Theme.CardHover,
     monster = {245, 119, 131}, potion = {114, 210, 166}, weapon = {136, 190, 244}
 }
 Dungeon = {}
@@ -274,7 +274,34 @@ end
 function HandleAction(piles, action)
     PilesRef = piles
     Notice = ""
-    if action == "advance" then Advance(piles)
+    if action == "hint" then
+        if not Alive() then Notice = "The run has ended. Undo to revisit a choice, or start a new run."; return end
+        local best, priority, advice = nil, -1, ""
+        local power = Attack(piles)
+        for i = 0, 3 do
+            local cards = piles:get(i).cards
+            if not cards:empty() then
+                local card, rank = cards:back(), Value(cards:back())
+                local weight, text = 0, ""
+                if card.suit == Suit.Diamonds then
+                    weight, text = 100, "Loot encounter " .. (i + 1) .. " for " .. rank .. " gold."
+                elseif card.suit == Suit.Clubs then
+                    weight = rank > power and 90 or Dungeon.dur <= 1 and 80 or 10
+                    text = "Encounter " .. (i + 1) .. ": " .. rank .. " ATK with three fresh strikes; compare your current weapon."
+                elseif card.suit == Suit.Hearts then
+                    weight = Dungeon.potions == 0 and Dungeon.hp < MAX_HP and 95 or 5
+                    text = "Encounter " .. (i + 1) .. ": heal up to " .. math.min(rank, MAX_HP - Dungeon.hp) .. " HP. Save it if you cannot drink yet."
+                else
+                    local damage = math.max(0, rank - power)
+                    weight, text = 50 - damage, "Fight encounter " .. (i + 1) .. ": " .. damage .. " HP damage"
+                    text = text .. (power > 0 and ", using one weapon strike." or " with bare hands.")
+                    if damage >= Dungeon.hp then weight, text = -10, "Combat would be fatal. Consider a retreat, potion, or stronger weapon." end
+                end
+                if weight > priority then best, priority, advice = i, weight, text end
+            end
+        end
+        Notice = best and advice or "The room is clear. Enter the next room, or camp if you need health."
+    elseif action == "advance" then Advance(piles)
     elseif action == "retreat" then Retreat(piles)
     elseif action == "camp" then Camp(piles)
     else
@@ -319,11 +346,14 @@ local function Button(x, y, w, label, action, enabled)
 end
 
 function DrawBackground()
-    DrawBoardPanel(40, 48, 1200, 630, 19, 25, 36)
-    DrawBoardPanel(68, 199, 195, 455, 29, 37, 51)
-    DrawBoardPanel(293, 199, 610, 455, 25, 32, 44)
-    DrawBoardPanel(925, 199, 290, 455, 29, 37, 51)
-    DrawBoardPanel(655, 67, 560, 98, 29, 37, 51)
+    local function Panel(x, y, w, h, color)
+        DrawBoardPanel(x, y, w, h, color[1], color[2], color[3])
+    end
+    Panel(40, 48, 1200, 630, Theme.Colors.WindowBg)
+    Panel(68, 199, 195, 455, Theme.Colors.TitleBgActive)
+    Panel(293, 199, 610, 455, Theme.Colors.PopupBg)
+    Panel(925, 199, 290, 455, Theme.Colors.TitleBgActive)
+    Panel(655, 67, 560, 98, Theme.Colors.TitleBgActive)
 end
 
 function Draw()
@@ -336,6 +366,10 @@ function Draw()
 
     Text(70, 67, "CRAWLER", "gold", 36)
     Text(72, 112, "Every card is a choice. Survive the whole deck.", "muted", 19)
+    Button(72, 151, 90, "Undo", "engine:undo", CanUndo())
+    Button(174, 151, 90, "Redo", "engine:redo", CanRedo())
+    Button(276, 151, 132, "New run", "engine:restart", true)
+    Button(420, 151, 120, "Advice", "hint", alive)
     Text(675, 82, "HEALTH   " .. Dungeon.hp .. " / " .. MAX_HP, Dungeon.hp <= 5 and "monster" or "potion", 20)
     DrawBoardPanel(675, 120, 216, 12, 17, 23, 32)
     DrawBoardPanel(675, 120, 216 * Dungeon.hp / MAX_HP, 12, Dungeon.hp <= 5 and 245 or 114,

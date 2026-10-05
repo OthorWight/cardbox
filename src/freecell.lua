@@ -1,146 +1,104 @@
 GameName = "FreeCell"
-HelpText = "Build the four foundations up in suit from Ace to King.\nCards on the tableau are built down by alternating color.\nUse the four free cells to temporarily store single cards."
+
+-- Deep teal window theme. Colors use RGB or RGBA byte channels.
+Theme = {
+    Background = {13, 26, 29}, BackgroundBottom = {9, 18, 21},
+    Toolbar = {18, 35, 39}, ButtonRounding = 6,
+    EmptyPile = {18, 35, 39, 180}, EmptyPileBorder = {58, 94, 100},
+    EmptyPileText = {146, 178, 177}, CardBack = {29, 66, 70},
+    CardBorder = {58, 94, 100}, CardHover = {116, 215, 201},
+    Colors = {
+        Text = {226, 240, 236}, TextDisabled = {146, 178, 177},
+        WindowBg = {18, 35, 39}, ChildBg = {18, 35, 39},
+        PopupBg = {24, 45, 49}, MenuBarBg = {18, 35, 39},
+        Border = {58, 94, 100}, BorderShadow = {0, 0, 0, 0},
+        FrameBg = {30, 63, 67}, FrameBgHovered = {44, 82, 85},
+        FrameBgActive = {58, 103, 102}, Button = {30, 63, 67},
+        ButtonHovered = {44, 82, 85}, ButtonActive = {58, 103, 102},
+        Header = {30, 63, 67}, HeaderHovered = {44, 82, 85},
+        HeaderActive = {58, 103, 102}, TitleBg = {18, 35, 39},
+        TitleBgActive = {24, 45, 49}, TitleBgCollapsed = {18, 35, 39},
+        Separator = {58, 94, 100}, SeparatorHovered = {116, 215, 201},
+        SeparatorActive = {116, 215, 201}, ScrollbarBg = {13, 26, 29},
+        ScrollbarGrab = {58, 94, 100}, ScrollbarGrabHovered = {44, 82, 85},
+        ScrollbarGrabActive = {58, 103, 102}, CheckMark = {116, 215, 201},
+        SliderGrab = {116, 215, 201}, SliderGrabActive = {116, 215, 201},
+        TextSelectedBg = {116, 215, 201, 65}, NavCursor = {116, 215, 201},
+        ModalWindowDimBg = {9, 18, 21, 190}
+    }
+}
+
 NumDecks = 1
-AutoCenter = true
+AutoCenter = false
+CardSize = ImVec2.new(90, 126)
+HelpText = 'Build foundations up by suit and tableau runs down in alternating colors. Free cells hold one card each. Any card may fill an empty column. Group capacity is (empty cells + 1) times 2 for each spare empty column; the destination column is not spare. Foundations can be moved back to the tableau. Use Hint and Safe foundations. Ctrl+Z/Ctrl+Y undo/redo; F2 restarts.'
+local game = Solitaire.new({kind="freecell", first=8, last=15, foundationFirst=4, foundationLast=7, goal=52,
+    progress="Foundation cards", mainLabel="Send safe cards", description="All cards are visible. Use free cells to move alternating-color runs.",
+    tip="Moving a group needs spare cells and columns. An empty destination is not a spare column."})
 
 function Init(piles, deck)
-    -- 0-3: Free cells (Top Left)
-    for i = 0, 3 do
-        local p = Pile.new()
-        p.pos = ImVec2.new(20 + i * 110, 20)
-        p.size = ImVec2.new(100, 140)
-        p.offset = ImVec2.new(0, 0)
-        p.type = PileType.FreeCellSlot
-        piles:push_back(p)
-    end
-
-    -- 4-7: Foundations (Top Right)
-    for i = 0, 3 do
-        local p = Pile.new()
-        p.pos = ImVec2.new(460 + i * 110, 20)
-        p.size = ImVec2.new(100, 140)
-        p.offset = ImVec2.new(0, 0)
-        p.type = PileType.Foundation
-        piles:push_back(p)
-    end
-
-    -- 8-15: Tableaus (Bottom)
-    for i = 0, 7 do
-        local p = Pile.new()
-        p.pos = ImVec2.new(20 + i * 110, 180)
-        p.size = ImVec2.new(100, 140)
-        p.offset = ImVec2.new(0, 30)
-        p.type = PileType.Tableau
-        piles:push_back(p)
-    end
-
-    -- Deal all 52 cards into the 8 tableaus
-    local tab = 8
+    game:Reset(piles)
+    for i=0,3 do game:Add(i, PileType.FreeCellSlot, 64+i*116, 160) end
+    for i=0,3 do game:Add(4+i, PileType.Foundation, 528+i*116, 160) end
+    for i=0,7 do game:Add(8+i, PileType.Tableau, 64+i*116, 310) end
+    local column=8
     while not deck:empty() do
-        local c = deck:back()
-        c.faceUp = true
-        piles:get(tab).cards:push_back(c)
-        deck:pop_back()
-        tab = tab + 1
-        if tab > 15 then tab = 8 end
+        local card=deck:take_back(); card.faceUp=true
+        piles:get(column).cards:push_back(card); column=8+(column-7)%8
     end
+    game:Layout()
 end
 
-function CanPickup(piles, pileIdx, cardIdx)
-    local p = piles:get(pileIdx)
-    if p.cards:empty() then return false end
-    
-    if p.type == PileType.Foundation then return false end
-    if p.type == PileType.FreeCellSlot then return true end
-    
-    local c = p.cards:get(cardIdx)
-    if not c.faceUp then return false end
-    
-    -- For multi-card drag, it must be a valid alternating sequence
-    for i = cardIdx, p.cards:size() - 2 do
-        local c1 = p.cards:get(i)
-        local c2 = p.cards:get(i + 1)
-        if c1:IsRed() == c2:IsRed() or c1.rank - 1 ~= c2.rank then
-            return false
-        end
-    end
-    
-    -- Check if we have enough empty cells to move this many cards
-    local numCards = p.cards:size() - cardIdx
-    if numCards == 1 then return true end
-    
-    local emptyFreeCells = 0
-    for i = 0, 3 do
-        if piles:get(i).cards:empty() then emptyFreeCells = emptyFreeCells + 1 end
-    end
-    
-    local emptyTableaus = 0
-    for i = 8, 15 do
-        if i ~= pileIdx and piles:get(i).cards:empty() then emptyTableaus = emptyTableaus + 1 end
-    end
-    
-    -- Max cards moving formula for FreeCell: (free cells + 1) * 2^(empty tableaus)
-    local maxMove = (emptyFreeCells + 1) * (2 ^ emptyTableaus)
-    return numCards <= maxMove
-end
-
-function CanDrop(piles, srcIdx, dstIdx, dragCards)
-    local dst = piles:get(dstIdx)
-    local c = dragCards:get(0)
-    
-    if dst.type == PileType.FreeCellSlot then
-        return dst.cards:empty() and dragCards:size() == 1
-    elseif dst.type == PileType.Foundation then
-        if dragCards:size() > 1 then return false end
-        if dst.cards:empty() then
-            return c.rank == Rank.Ace
-        else
-            local top = dst.cards:back()
-            return top.suit == c.suit and top.rank + 1 == c.rank
-        end
-    elseif dst.type == PileType.Tableau then
-        if dst.cards:empty() then return true end
-        local top = dst.cards:back()
-        return top:IsRed() ~= c:IsRed() and top.rank - 1 == c.rank
-    end
-    
-    return false
-end
-
-function AfterMove(piles, srcIdx, dstIdx, cardIdx)
-end
-
-function HandleClick(piles, pileIdx)
-end
-
-function IsWon(piles)
-    for i = 4, 7 do
-        if piles:get(i).cards:size() ~= 13 then return false end
+function CanPickup(piles, source, index)
+    local pile=piles:get(source)
+    if index<0 or index>=pile.cards:size() or not pile.cards:get(index).faceUp then return false end
+    if source<8 then return index==pile.cards:size()-1 end
+    for i=index,pile.cards:size()-2 do
+        local a,b=pile.cards:get(i),pile.cards:get(i+1)
+        if not b.faceUp or a:IsRed()==b:IsRed() or a.rank~=b.rank+1 then return false end
     end
     return true
 end
 
-function AutoSolve(piles)
-    for i = 0, 15 do
-        if i < 4 or i > 7 then -- Check FreeCells and Tableaus
-            local p = piles:get(i)
-            if not p.cards:empty() then
-                local c = p.cards:back()
-                for f = 4, 7 do
-                    local fnd = piles:get(f)
-                    if fnd.cards:empty() then
-                        if c.rank == Rank.Ace then
-                            return {i, f, p.cards:size() - 1}
-                        end
-                    else
-                        local top = fnd.cards:back()
-                        if top.suit == c.suit and top.rank + 1 == c.rank then
-                            return {i, f, p.cards:size() - 1}
-                        end
-                    end
-                end
-            end
-        end
+function MoveCapacity(piles, source, target)
+    local cells,columns=0,0
+    for i=0,3 do if piles:get(i).cards:empty() then cells=cells+1 end end
+    for i=8,15 do
+        if i~=source and i~=target and piles:get(i).cards:empty() then columns=columns+1 end
     end
-    return {}
+    return (cells+1)*2^columns
+end
+
+function CanDrop(piles, source, target, cards)
+    if source==target or cards:empty() then return false end
+    local pile,card=piles:get(target),cards:front()
+    if target<4 then return cards:size()==1 and pile.cards:empty() end
+    if target<8 then
+        if cards:size()~=1 then return false end
+        if pile.cards:empty() then return card.rank==1 end
+        local top=pile.cards:back()
+        return top.suit==card.suit and top.rank+1==card.rank
+    end
+    if cards:size()>MoveCapacity(piles,source,target) then return false end
+    if pile.cards:empty() then return true end
+    local top=pile.cards:back()
+    return top:IsRed()~=card:IsRed() and top.rank==card.rank+1
+end
+function AfterMove() game:Record() end
+function HandleClick() end
+
+function IsWon() return game:Progress()==game.config.goal end
+function AutoSolve(piles) game.piles=piles; game:Layout(); return {} end
+function SaveState() return game:SaveState() end
+function LoadState(piles,data) game:LoadState(piles,data) end
+function DrawBackground() game:Background() end
+function Draw() game:Draw() end
+function HandleAction(piles,action)
+    game.piles=piles
+    if action=="hint" then game:Hint()
+    elseif action=="safe" and game.config.foundationFirst and game.config.kind~="spider" then game:SafeFoundations()
+    elseif action=="main" then
+        if game.config.stock then HandleClick(piles,game.config.stock)
+        elseif game.config.foundationFirst then game:SafeFoundations() end
+    end
 end

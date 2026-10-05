@@ -1,174 +1,114 @@
 GameName = "Klondike"
+
+-- Slate blue window theme. Colors use RGB or RGBA byte channels.
+Theme = {
+    Background = {15, 23, 35}, BackgroundBottom = {10, 16, 26},
+    Toolbar = {20, 30, 44}, ButtonRounding = 6,
+    EmptyPile = {20, 30, 44, 180}, EmptyPileBorder = {65, 84, 105},
+    EmptyPileText = {150, 168, 188}, CardBack = {40, 65, 96},
+    CardBorder = {65, 84, 105}, CardHover = {135, 192, 244},
+    Colors = {
+        Text = {231, 236, 241}, TextDisabled = {150, 168, 188},
+        WindowBg = {20, 30, 44}, ChildBg = {20, 30, 44},
+        PopupBg = {28, 41, 58}, MenuBarBg = {20, 30, 44},
+        Border = {65, 84, 105}, BorderShadow = {0, 0, 0, 0},
+        FrameBg = {37, 56, 78}, FrameBgHovered = {52, 75, 101},
+        FrameBgActive = {70, 94, 120}, Button = {37, 56, 78},
+        ButtonHovered = {52, 75, 101}, ButtonActive = {70, 94, 120},
+        Header = {37, 56, 78}, HeaderHovered = {52, 75, 101},
+        HeaderActive = {70, 94, 120}, TitleBg = {20, 30, 44},
+        TitleBgActive = {28, 41, 58}, TitleBgCollapsed = {20, 30, 44},
+        Separator = {65, 84, 105}, SeparatorHovered = {135, 192, 244},
+        SeparatorActive = {135, 192, 244}, ScrollbarBg = {15, 23, 35},
+        ScrollbarGrab = {65, 84, 105}, ScrollbarGrabHovered = {52, 75, 101},
+        ScrollbarGrabActive = {70, 94, 120}, CheckMark = {135, 192, 244},
+        SliderGrab = {135, 192, 244}, SliderGrabActive = {135, 192, 244},
+        TextSelectedBg = {135, 192, 244, 65}, NavCursor = {135, 192, 244},
+        ModalWindowDimBg = {10, 16, 26, 190}
+    }
+}
+
 NumDecks = 1
-AutoCenter = true
-HelpText = "Move all 52 cards to the four foundation piles at the top right.\nFoundations are built up by suit, from Ace to King.\nTableau piles can be built down by alternating colors.\nClick the stock pile (top left) to deal more cards."
+AutoCenter = false
+CardSize = ImVec2.new(90, 126)
+HelpText = 'Draw-one Klondike. Build tableau runs down in alternating colors; only Kings fill empty columns. Build foundations up by suit from Ace to King. Unlimited stock recycling. Hint shows a legal move. Safe foundations only moves cards that will not trap lower ranks. Ctrl+Z/Ctrl+Y undo/redo; F2 starts a new deal.'
+local game = Solitaire.new({kind="klondike", first=6, last=12, stock=0, waste=1, foundationFirst=2, foundationLast=5, goal=52,
+    progress="Foundation cards", mainLabel="Draw / recycle", description="Draw one. Build alternating colors down; foundations climb by suit.",
+    tip="Only Kings fill empty columns. Right-click an exposed card to send it to a foundation."})
 
 function Init(piles, deck)
-    local startX, startY = 20.0, 40.0
-    local padX = 100.0 + 20.0
-
-    local stock = Pile.new()
-    stock.id = 0
-    stock.type = PileType.Stock
-    stock.pos = ImVec2.new(startX, startY)
-    stock.size = ImVec2.new(100.0, 140.0)
-    stock.offset = ImVec2.new(0.2, -0.5)
-    piles:push_back(stock)
-
-    local waste = Pile.new()
-    waste.id = 1
-    waste.type = PileType.Waste
-    waste.pos = ImVec2.new(startX + padX, startY)
-    waste.size = ImVec2.new(100.0, 140.0)
-    waste.offset = ImVec2.new(25.0, 0.0)
-    piles:push_back(waste)
-
-    for i = 0, 3 do
-        local found = Pile.new()
-        found.id = 2 + i
-        found.type = PileType.Foundation
-        found.pos = ImVec2.new(startX + padX * (3 + i), startY)
-        found.size = ImVec2.new(100.0, 140.0)
-        found.offset = ImVec2.new(0.0, 0.0)
-        piles:push_back(found)
-    end
-
-    for i = 0, 6 do
-        local tab = Pile.new()
-        tab.id = 6 + i
-        tab.type = PileType.Tableau
-        tab.pos = ImVec2.new(startX + padX * i, startY + 140.0 + 60.0)
-        tab.size = ImVec2.new(100.0, 140.0)
-        tab.offset = ImVec2.new(0.0, 25.0)
-
-        for j = 0, i do
-            local c = deck:back()
-            deck:pop_back()
-            c.faceUp = (j == i)
-            tab.cards:push_back(c)
+    game:Reset(piles)
+    game:Add(0, PileType.Stock, 64, 160, ImVec2.new(0.15, -0.3))
+    game:Add(1, PileType.Waste, 190, 160, ImVec2.new(18, 0))
+    for i=0,3 do game:Add(2+i, PileType.Foundation, 490+i*116, 160) end
+    for i=0,6 do
+        game:Add(6+i, PileType.Tableau, 64+i*128, 330)
+        for j=0,i do
+            local card=deck:take_back(); card.faceUp=j==i
+            piles:get(6+i).cards:push_back(card)
         end
-        piles:push_back(tab)
     end
-
-    -- Finally, put the remaining cards into the stock pile
-    piles:get(0).cards = deck
+    piles:get(0).cards=deck
+    game:Layout()
 end
 
-function CanPickup(piles, pileIdx, cardIdx)
-    local p = piles:get(pileIdx)
-    local c = p.cards:get(cardIdx)
-    if not c.faceUp then return false end
-
-    for i = cardIdx, p.cards:size() - 2 do
-        local c1 = p.cards:get(i)
-        local c2 = p.cards:get(i + 1)
-        if c1:Color() == c2:Color() or c1.rank - 1 ~= c2.rank then
-            return false
-        end
+function CanPickup(piles, source, index)
+    local pile=piles:get(source)
+    if source==0 or index<0 or index>=pile.cards:size() then return false end
+    if not pile.cards:get(index).faceUp then return false end
+    if source<=5 then return index==pile.cards:size()-1 end
+    for i=index,pile.cards:size()-2 do
+        local a,b=pile.cards:get(i),pile.cards:get(i+1)
+        if not b.faceUp or a:IsRed()==b:IsRed() or a.rank~=b.rank+1 then return false end
     end
     return true
 end
 
-function CanDrop(piles, sourcePileIdx, targetPileIdx, dragCards)
-    local tp = piles:get(targetPileIdx)
-    local dragBottom = dragCards:get(0)
-
-    if tp.type == PileType.Foundation then
-        if dragCards:size() > 1 then return false end
-        if tp.cards:empty() then
-            return dragBottom.rank == 1 -- Ace
-        else
-            local top = tp.cards:back()
-            return top.suit == dragBottom.suit and top.rank + 1 == dragBottom.rank
-        end
-    elseif tp.type == PileType.Tableau then
-        if tp.cards:empty() then
-            return dragBottom.rank == 13 -- King
-        else
-            local top = tp.cards:back()
-            return top:Color() ~= dragBottom:Color() and top.rank - 1 == dragBottom.rank
-        end
+function CanDrop(piles, source, target, cards)
+    if source==target or cards:empty() or target<2 then return false end
+    local pile,card=piles:get(target),cards:front()
+    if target<=5 then
+        if cards:size()~=1 then return false end
+        if pile.cards:empty() then return card.rank==1 end
+        local top=pile.cards:back()
+        return top.suit==card.suit and top.rank+1==card.rank
     end
-    return false
+    if pile.cards:empty() then return card.rank==13 end
+    local top=pile.cards:back()
+    return top.faceUp and top:IsRed()~=card:IsRed() and top.rank==card.rank+1
 end
 
-function AfterMove(piles, sourcePileIdx, targetPileIdx, cardIdx)
-    local sp = piles:get(sourcePileIdx)
-    if not sp.cards:empty() and sp.type == PileType.Tableau and not sp.cards:back().faceUp then
-        sp.cards:back().faceUp = true
-    end
+function AfterMove(piles, source, target, index)
+    local cards=piles:get(source).cards
+    if source>=6 and not cards:empty() then cards:back().faceUp=true end
+    game:Record()
 end
 
-function HandleClick(piles, pileIdx)
-    if pileIdx ~= 0 then return end
-
-    local p = piles:get(pileIdx)
-    local wasteIdx = 1
-    local waste = piles:get(wasteIdx)
-    
-    if not p.cards:empty() then
-        local c = p.cards:back()
-        p.cards:pop_back()
-        c.faceUp = true
-        waste.cards:push_back(c)
-    else
-        while not waste.cards:empty() do
-            local c = waste.cards:back()
-            waste.cards:pop_back()
-            c.faceUp = false
-            p.cards:push_back(c)
-        end
-    end
+function HandleClick(piles, source)
+    if source~=0 then return end
+    local stock,waste=piles:get(0).cards,piles:get(1).cards
+    if not stock:empty() then
+        local card=stock:take_back(); card.faceUp=true; waste:push_back(card)
+        game.draws=game.draws+1
+    elseif not waste:empty() then
+        while not waste:empty() do local card=waste:take_back(); card.faceUp=false; stock:push_back(card) end
+        game.passes=game.passes+1
+    else game.notice="The stock and waste are empty."; return end
+    game:Record()
 end
 
-function IsWon(piles)
-    local foundCount = 0
-    for i = 0, piles:size() - 1 do
-        if piles:get(i).type == PileType.Foundation then
-            foundCount = foundCount + piles:get(i).cards:size()
-        end
+function IsWon() return game:Progress()==game.config.goal end
+function AutoSolve(piles) game.piles=piles; game:Layout(); return {} end
+function SaveState() return game:SaveState() end
+function LoadState(piles,data) game:LoadState(piles,data) end
+function DrawBackground() game:Background() end
+function Draw() game:Draw() end
+function HandleAction(piles,action)
+    game.piles=piles
+    if action=="hint" then game:Hint()
+    elseif action=="safe" and game.config.foundationFirst and game.config.kind~="spider" then game:SafeFoundations()
+    elseif action=="main" then
+        if game.config.stock then HandleClick(piles,game.config.stock)
+        elseif game.config.foundationFirst then game:SafeFoundations() end
     end
-    return foundCount == 52
-end
-
-function AutoSolve(piles)
-    local allFaceUp = true
-    local hasCardsInPlay = false
-    for i = 0, piles:size() - 1 do
-        local p = piles:get(i)
-        if (p.type == PileType.Stock or p.type == PileType.Waste) and not p.cards:empty() then
-            allFaceUp = false
-            break
-        end
-    end
-    if allFaceUp then
-        for i = 0, piles:size() - 1 do
-            local p = piles:get(i)
-            if p.type == PileType.Tableau then
-                for j = 0, p.cards:size() - 1 do
-                    if not p.cards:get(j).faceUp then allFaceUp = false break end
-                end
-                if not p.cards:empty() then hasCardsInPlay = true end
-            end
-            if not allFaceUp then break end
-        end
-    end
-
-    if allFaceUp and hasCardsInPlay then
-        for i = 0, piles:size() - 1 do
-            local p = piles:get(i)
-            if p.type == PileType.Tableau and not p.cards:empty() then
-                local cardIdx = p.cards:size() - 1
-                local stack = VectorCard.new()
-                stack:push_back(p.cards:back())
-                for f = 0, piles:size() - 1 do
-                    local tp = piles:get(f)
-                    if tp.type == PileType.Foundation and CanDrop(piles, i, f, stack) then
-                        return {i, f, cardIdx} -- Return 0-based indices as expected by C++
-                    end
-                end
-            end
-        end
-    end
-    return {}
 end

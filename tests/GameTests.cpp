@@ -195,7 +195,7 @@ struct GameTestAccess {
 
         game.InitGame("src/dungeon.lua");
         Require(game.ActiveTheme().background != defaults.background, "Crawler theme was not loaded");
-        game.InitGame("src/example.lua");
+        game.InitGame("tests/fixtures/unthemed.lua");
         Require(game.ActiveTheme().background == defaults.background && !game.m_theme.colors[ImGuiCol_Button],
             "theme leaked into unthemed game");
         RunScript(game, "assert(Theme == nil, 'Theme global leaked across game switch')");

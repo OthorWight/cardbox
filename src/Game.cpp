@@ -361,8 +361,11 @@ void Game::SetupLuaBindings() {
     // Run button actions after Draw returns so snapshots never replace a board
     // while the script is still drawing it.
     m_lua.set_function("PerformAction", [this](const std::string& action) {
-        if (m_pendingAction.empty() && !m_isWon) m_pendingAction = action;
+        if (m_pendingAction.empty() && (!m_isWon || action == "engine:undo" ||
+            action == "engine:redo" || action == "engine:restart")) m_pendingAction = action;
     });
+    m_lua.set_function("CanUndo", [this]() { return !m_undoStack.empty(); });
+    m_lua.set_function("CanRedo", [this]() { return !m_redoStack.empty(); });
     m_lua.set_function("EmitBoardParticles", [this](float x, float y, float w, float h) {
         if (!ImGui::GetCurrentContext() || !ImGui::GetCurrentWindowRead()) return;
         ImVec2 center(s_boardBasePos.x + x * s_boardScale, s_boardBasePos.y + y * s_boardScale);
@@ -463,6 +466,12 @@ void Game::LoadCardTextures() {
     m_cardBackTexture = loadTexture(baseDir + "card back blue.png"); // Repo has no back by default, so procedural fallback activates
 }
 
+void Game::LoadLuaSupport(const std::string& scriptPath) {
+    m_lua["Solitaire"] = sol::lua_nil;
+    const auto support = std::filesystem::path(scriptPath).parent_path() / "lib" / "solitaire.lua";
+    if (std::filesystem::exists(support)) m_lua.script_file(support.string(), sol::load_mode::text);
+}
+
 void Game::InitGame(const std::string& scriptPath) {
     m_currentScriptPath = scriptPath;
     m_pendingAction.clear();
@@ -506,6 +515,7 @@ void Game::InitGame(const std::string& scriptPath) {
         m_lua["LoadState"] = sol::lua_nil;
 
         lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+        LoadLuaSupport(m_currentScriptPath);
         m_lua.script_file(m_currentScriptPath, sol::load_mode::text);
         m_currentGameName = m_lua["GameName"].get_or<std::string>("Unknown Game");
         m_currentHelpText = m_lua["HelpText"].get_or<std::string>("No help available.");
@@ -611,22 +621,25 @@ void Game::DoMove(int sourcePileIdx, int targetPileIdx, int cardIdx) {
     }
 }
 
-void Game::HandleClick(int pileIdx) {
+void Game::HandleClick(int pileIdx, int cardIdx) {
     if (pileIdx < 0 || pileIdx >= (int)m_piles.size()) return;
-    HandleScriptAction("HandleClick", sol::make_object(m_lua, pileIdx));
+    HandleScriptAction("HandleClick", sol::make_object(m_lua, pileIdx), cardIdx);
 }
 
 void Game::HandleAction(const std::string& action) {
+    if (action == "engine:undo") { Undo(); return; }
+    if (action == "engine:redo") { Redo(); return; }
+    if (action == "engine:restart") { InitGame(m_currentScriptPath); return; }
     HandleScriptAction("HandleAction", sol::make_object(m_lua, action));
 }
 
-void Game::HandleScriptAction(const char* callback, const sol::object& argument) {
+void Game::HandleScriptAction(const char* callback, const sol::object& argument, std::optional<int> cardIdx) {
     sol::protected_function function = m_lua[callback];
     if (!function.valid()) return;
     SavedState backup = CaptureState();
     try {
         lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug*) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
-        sol::protected_function_result result = function(m_piles, argument);
+        sol::protected_function_result result = cardIdx ? function(m_piles, argument, *cardIdx) : function(m_piles, argument);
         lua_sethook(m_lua.lua_state(), nullptr, 0, 0);
         if (!result.valid()) { sol::error error = result; throw error; }
     } catch (const sol::error& error) {
@@ -750,6 +763,7 @@ void Game::RenderStartScreen(ImDrawList* drawList, float scale) {
                 m_lua["Theme"] = sol::lua_nil;
 
                 lua_sethook(m_lua.lua_state(), [](lua_State* L, lua_Debug* ar) { luaL_error(L, "Script execution limit exceeded!"); }, LUA_MASKCOUNT, 500000);
+                LoadLuaSupport(path);
                 m_lua.script_file(path, sol::load_mode::text);
                 p.name = m_lua["GameName"].get_or<std::string>("Unknown");
                 p.autoCenter = m_lua["AutoCenter"].get_or(true);
@@ -1080,7 +1094,7 @@ void Game::ProcessInput(float scale, const ImVec2& boardBasePos, int& outHovered
             }
             
             if (isClick) {
-                HandleClick(m_dragSourcePile);
+                HandleClick(m_dragSourcePile, m_dragCardIndex);
             }
         }
         
@@ -1127,7 +1141,7 @@ void Game::ProcessInput(float scale, const ImVec2& boardBasePos, int& outHovered
     // Single Click / Start Drag
     else if (mouseClicked && outHoveredPile != -1) {
         if (m_piles[outHoveredPile].type == PileType::Stock) {
-            HandleClick(outHoveredPile);
+            HandleClick(outHoveredPile, outHoveredCard);
         } else if (outHoveredCard != -1) {
             if (CanPickup(outHoveredPile, outHoveredCard)) {
                 m_dragSourcePile = outHoveredPile;
@@ -1144,10 +1158,10 @@ void Game::ProcessInput(float scale, const ImVec2& boardBasePos, int& outHovered
                                         boardBasePos.y + p.pos.y * scale + pOffset.y * drawIndex);
                 m_dragOffset = ImVec2(mousePos.x - cardPos.x, mousePos.y - cardPos.y);
             } else {
-                HandleClick(outHoveredPile);
+                HandleClick(outHoveredPile, outHoveredCard);
             }
         } else if (m_piles[outHoveredPile].cards.empty()) {
-            HandleClick(outHoveredPile);
+            HandleClick(outHoveredPile, outHoveredCard);
         }
     }
 
@@ -1504,7 +1518,8 @@ void Game::UpdateAndDraw() {
     if (!m_pendingAction.empty()) {
         std::string action = std::move(m_pendingAction);
         m_pendingAction.clear();
-        if (!isDealing && !m_isWon) HandleAction(action);
+        if (action == "engine:undo" || action == "engine:redo" || action == "engine:restart" ||
+            (!isDealing && !m_isWon)) HandleAction(action);
     }
 
     CheckWinCondition(scale, cardsAnimating);

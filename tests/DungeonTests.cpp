@@ -5,6 +5,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <unordered_set>
+#include <filesystem>
 
 static void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
@@ -194,7 +195,7 @@ struct DungeonTestAccess {
         Require(Stat(game, "finished") == 0 && game.m_score == 0, "undo kept victory bonus");
         game.Redo();
         Require(Stat(game, "finished") == 1 && game.m_score == 50, "redo lost victory bonus");
-        game.InitGame("src/klondike.lua");
+        game.InitGame("tests/fixtures/unthemed.lua");
         Require(!game.m_lua["SaveState"].valid() && !game.m_lua["HandleAction"].valid() &&
             !game.m_lua["DrawBackground"].valid(), "dungeon hooks leaked into another game");
 
@@ -261,6 +262,7 @@ struct DungeonTestAccess {
             origin.y += ImGui::GetFrameHeight();
             for (auto& pile : game.m_piles) {
                 for (auto& card : pile.cards) {
+                    if (card.hasInitializedPos) continue;
                     card.hasInitializedPos = true;
                     card.animPos = ImVec2(origin.x + pile.pos.x * scale, origin.y + pile.pos.y * scale);
                     card.flipVisual = card.faceUp ? 1.0f : -1.0f;
@@ -303,18 +305,16 @@ struct DungeonTestAccess {
             ++frames;
             Require(game.m_lua["drawnFrames"].get<int>() == frames, "dungeon HUD failed to draw");
         };
-        // Warm up the font atlas before capturing the actual ImGui geometry.
-        for (int i = 0; i < 5; ++i) drawFrame();
-        if (previewPath) {
+        auto capturePreview = [&](const char* path) {
             Require(io.Fonts->TexData->Format == ImTextureFormat_RGBA32, "unexpected preview atlas format");
             pixels = io.Fonts->TexData->Pixels;
             width = io.Fonts->TexData->Width;
             height = io.Fonts->TexData->Height;
-            std::ofstream atlas(std::string(previewPath) + ".atlas", std::ios::binary);
+            std::ofstream atlas(std::string(path) + ".atlas", std::ios::binary);
             atlas.write(reinterpret_cast<const char*>(&width), sizeof(width));
             atlas.write(reinterpret_cast<const char*>(&height), sizeof(height));
             atlas.write(reinterpret_cast<const char*>(pixels), width * height * 4);
-            std::ofstream output(previewPath);
+            std::ofstream output(path);
             output << "[";
             bool first = true;
             auto* data = ImGui::GetDrawData();
@@ -337,7 +337,10 @@ struct DungeonTestAccess {
                 }
             }
             output << ']';
-        }
+        };
+        // Warm up the font atlas before capturing the actual ImGui geometry.
+        for (int i = 0; i < 5; ++i) drawFrame();
+        if (previewPath) capturePreview(previewPath);
 
         // Click the real Fight button. It queues a history-aware action after
         // Draw rather than mutating the board while the HUD holds references.
@@ -387,12 +390,40 @@ struct DungeonTestAccess {
         drawFrame();
         Require(buttonIds == stableButtonIds, "DPI scaling changed board button identity");
         ImGui::GetStyle().ScaleAllSizes(0.5f);
-        // Legacy three-argument text calls must still work in other rule scripts.
-        Init(game);
-        game.InitGame("src/example.lua");
-        Script(game, "drawnFrames = 0; originalDraw = Draw; Draw = function() originalDraw(); drawnFrames = drawnFrames + 1 end");
-        frames = 0;
-        drawFrame();
+        // Render every bundled game through the same window/theme checks.
+        // Scripts without custom HUDs also exercise legacy text calls.
+        io.DisplaySize = ImVec2(1280, 720);
+        for (const auto& entry : std::filesystem::directory_iterator("src")) {
+            if (entry.path().extension() != ".lua") continue;
+            game.InitGame(entry.path().string());
+            Require(!game.m_currentScriptPath.empty(), "bundled game failed to load for rendering");
+            Script(game, "drawnFrames = 0; originalDraw = Draw; Draw = function() "
+                "if originalDraw then originalDraw() else DrawBoardText(20, 0, '') end; drawnFrames = drawnFrames + 1 end");
+            frames = 0;
+            // Let the normal card animations settle for preview captures.
+            for (int i = 0; i < (previewPath ? 30 : 2); ++i) drawFrame();
+            if (previewPath) {
+                const auto path = std::filesystem::path(previewPath).parent_path() /
+                    (entry.path().stem().string() + "-preview.json");
+                capturePreview(path.string().c_str());
+            }
+            if (entry.path().stem() == "texas_holdem") {
+                // Exercise the betting HUD, not only the empty Ready screen.
+                game.HandleAction("start");
+                game.HandleAction("pause");
+                for (int step = 0; step < 100; ++step) {
+                    sol::table poker = game.m_lua["Poker"];
+                    if (poker["turn"].get<int>() == 1) break;
+                    game.HandleAction("tick");
+                }
+                Script(game, "assert(Poker.turn == 1 and Poker.phase == 'PreFlop')");
+                for (int i = 0; i < (previewPath ? 30 : 2); ++i) drawFrame();
+                if (previewPath) {
+                    const auto path = std::filesystem::path(previewPath).parent_path() / "texas_holdem-preview.json";
+                    capturePreview(path.string().c_str());
+                }
+            }
+        }
         ImGui::DestroyContext();
     }
 };
